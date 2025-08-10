@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>文件分享 - 提取文件</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .share-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #2196F3;
+            margin-bottom: 30px;
+        }
+        .code-input {
+            margin: 20px 0;
+        }
+        .code-input input {
+            width: 80%;
+            max-width: 300px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .code-input input:focus {
+            border-color: #2196F3;
+            outline: none;
+            box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+        }
+        .submit-button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .submit-button:hover {
+            background-color: #1976D2;
+        }
+        .submit-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #f44336;
+            margin-top: 10px;
+            display: none;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+        }
+        .file-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+            display: none;
+        }
+        .file-info h3 {
+            margin: 0 0 15px 0;
+            color: #2196F3;
+        }
+        .file-info p {
+            margin: 8px 0;
+            color: #666;
+        }
+        .download-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .download-button:hover {
+            background-color: #45a049;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #2196F3;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .share-type-message {
+            margin: 20px 0;
+            font-size: 18px;
+            color: #666;
+        }
+        /* 添加视频和图片预览样式 */
+        .preview-container {
+            margin: 20px 0;
+            display: none;
+        }
+        .video-preview {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .video-preview video {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .image-preview {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .image-preview img {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .preview-button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .preview-button:hover {
+            background-color: #1976D2;
+        }
+        /* 添加视频播放器和遮罩层 */
+        .video-player {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            max-width: 95%;
+            max-height: 95vh;
+        }
+        .video-player video {
+            max-width: 100%;
+            max-height: 90vh;
+            display: block;
+            margin: 0 auto;
+        }
+        .close-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+        }
+        .close-button:hover {
+            color: #f44336;
+        }
+        .video-controls {
+            position: relative;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <div class="share-container">
+        <h1>文件分享</h1>
+        <div id="loading" class="loading"></div>
+        <div id="error-message" class="error-message"></div>
+        
+        <!-- 公开分享区域 -->
+        <div id="public-share" style="display: none;">
+            <div class="share-type-message">这是一个公开分享的文件</div>
+            <div class="file-info" id="file-info">
+                <h3>文件信息</h3>
+                <p>文件名：<span id="file-name"></span></p>
+                <p>文件大小：<span id="file-size"></span></p>
+                <p>分享时间：<span id="share-time"></span></p>
+                <p>过期时间：<span id="expire-time"></span></p>
+                <div class="preview-container" id="preview-container">
+                    <div id="video-preview" class="video-preview">
+                        <video controls preload="metadata" type="video/mp4" crossorigin="anonymous">
+                            您的浏览器不支持视频播放。
+                        </video>
+                    </div>
+                    <div id="image-preview" class="image-preview">
+                        <img src="" alt="预览图片">
+                    </div>
+                </div>
+                <button class="download-button" onclick="downloadFile()">下载文件</button>
+            </div>
+        </div>
+
+        <!-- 受保护分享区域 -->
+        <div id="protected-share" style="display: none;">
+            <div class="share-type-message">这是一个受保护的文件，请输入提取码</div>
+            <div class="code-input">
+                <input type="text" id="share-code" placeholder="请输入6位提取码" maxlength="6" autocomplete="off">
+            </div>
+            <button class="submit-button" onclick="verifyShareCode()" id="submit-button">提取文件</button>
+            <div class="file-info" id="protected-file-info" style="display: none;">
+                <h3>文件信息</h3>
+                <p>文件名：<span id="protected-file-name"></span></p>
+                <p>文件大小：<span id="protected-file-size"></span></p>
+                <p>分享时间：<span id="protected-share-time"></span></p>
+                <p>过期时间：<span id="protected-expire-time"></span></p>
+                <div class="preview-container" id="protected-preview-container">
+                    <div id="protected-video-preview" class="video-preview">
+                        <video controls preload="metadata" type="video/mp4" crossorigin="anonymous">
+                            您的浏览器不支持视频播放。
+                        </video>
+                    </div>
+                    <div id="protected-image-preview" class="image-preview">
+                        <img src="" alt="预览图片">
+                    </div>
+                </div>
+                <button class="download-button" onclick="downloadFile()">下载文件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加视频播放器和遮罩层 -->
+    <div class="overlay" id="overlay"></div>
+    <div class="video-player" id="video-player">
+        <button class="close-button" id="video-close-button">&times;</button>
+        <video id="video-element" controls>
+            您的浏览器不支持视频播放。
+        </video>
+        <div class="video-controls">
+        </div>
+    </div>
+
+    <script>
+        let currentFileId = null;
+        let currentFileName = null;
+        let shareType = null;
+        let shareCode = null;
+        let isPreviewVisible = false;
+        let isProtected = false;  // 新增变量，用于区分是否是受保护的文件
+
+        // 初始化视频元素的事件监听器
+        function initVideoElement(videoElement) {
+            console.warn("初始化视频元素");
+            if (!videoElement) return;
+            
+            // 移除可能存在的旧事件监听器
+            videoElement.removeEventListener('seeking', videoElement.seekingHandler);
+            videoElement.removeEventListener('seeked', videoElement.seekedHandler);
+            videoElement.removeEventListener('loadedmetadata', videoElement.loadedmetadataHandler);
+            videoElement.removeEventListener('play', videoElement.playHandler);
+            videoElement.removeEventListener('error', videoElement.errorHandler);
+        }
+
+        // 页面加载时获取分享类型
+        window.onload = function() {
+            // 从URL中获取分享码
+            shareCode = window.location.pathname.split('/').pop();
+            
+            // 从URL中获取提取码（如果有）
+            const urlParams = new URLSearchParams(window.location.search);
+            const extractCode = urlParams.get('extract_code');
+            
+            // 显示加载状态
+            showLoading();
+            
+            // 获取分享信息
+            fetchShareInfo().then(() => {
+                if (extractCode) {
+                    document.getElementById('share-code').value = extractCode;
+                    verifyShareCode();
+                }
+            });
+        };
+
+        function fetchShareInfo() {
+            return fetch(`/share/info/${shareCode}`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            // 如果是403错误，显示提取码输入界面
+                            hideLoading();
+                            document.getElementById('public-share').style.display = 'none';
+                            document.getElementById('protected-share').style.display = 'block';
+                            return;
+                        }
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+                    if (data.code === 0) {
+                        shareType = data.shareType;
+                        isProtected = shareType === 'protected';
+                        if (isProtected) {
+                            document.getElementById('public-share').style.display = 'none';
+                            document.getElementById('protected-share').style.display = 'block';
+                        } else {
+                            document.getElementById('public-share').style.display = 'block';
+                            document.getElementById('protected-share').style.display = 'none';
+                            showFileInfo(data.file);
+                        }
+                    } else {
+                        showError(data.message || '分享链接无效或已过期');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('获取分享信息失败:', error);
+                    showError('请输入提取码');
+                });
+        }
+
+        function verifyShareCode() {
+            const extractCode = document.getElementById('share-code').value.trim();
+            if (!extractCode) {
+                showError('请输入提取码');
+                return;
+            }
+
+            showLoading();
+            fetch(`/share/info/${shareCode}?extract_code=${extractCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.code === 0) {
+                        hideError();
+                        shareType = data.shareType;
+                        isProtected = true;
+                        showFileInfo(data.file);
+                        document.getElementById('protected-file-info').style.display = 'block';
+                    } else {
+                        showError(data.message || '提取码错误');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('验证提取码失败:', error);
+                    showError('验证提取码失败，请稍后重试');
+                });
+        }
+
+        function showFileInfo(file) {
+            // 根据是否是受保护的文件选择不同的元素
+            const prefix = isProtected ? 'protected-' : '';
+            const fileInfo = document.getElementById(`${prefix}file-info`);
+            const previewContainer = document.getElementById(`${prefix}preview-container`);
+            const videoPreview = document.getElementById(`${prefix}video-preview`);
+            const imagePreview = document.getElementById(`${prefix}image-preview`);
+
+            // 设置文件信息
+            document.getElementById(`${prefix}file-name`).textContent = file.originalName;
+            document.getElementById(`${prefix}file-size`).textContent = formatSize(file.size);
+            document.getElementById(`${prefix}share-time`).textContent = formatDate(file.shareTime);
+            document.getElementById(`${prefix}expire-time`).textContent = file.expireTime ? 
+                formatDate(file.expireTime) : '永不过期';
+            
+            currentFileId = file.id;
+            currentFileName = file.name;
+            fileInfo.style.display = 'block';
+
+            // 检查文件类型并显示预览
+            const fileExtension = file.originalName.split('.').pop().toLowerCase();
+            const isVideo = fileExtension === 'mp4';
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+
+            if (isVideo || isImage) {
+                previewContainer.style.display = 'block';
+                if (isVideo) {
+                    const videoElement = videoPreview.querySelector('video');
+                    if (videoElement) {
+                        // 先隐藏图片预览
+                        imagePreview.style.display = 'none';
+                        
+                        // 设置视频属性
+                        // 移除autoplay以避免立即加载，让用户手动点击播放
+                        videoElement.preload = 'metadata'; // 只预加载元数据
+                        videoElement.type = 'video/mp4';
+                        videoElement.crossOrigin = 'anonymous';
+                        videoElement.removeAttribute('data-played'); // 清除播放状态
+                        videoElement.removeAttribute('data-errorRetried'); // 清除错误重试状态
+                        
+                        // 先初始化事件监听器
+                        initVideoElement(videoElement);
+                        
+                        // 然后设置视频源URL
+                        let videoUrl = `/share/download/${currentFileName}?code=${shareCode}`;
+                        if (isProtected) {
+                            const extractCode = document.getElementById('share-code').value.trim();
+                            videoUrl += `&extract_code=${extractCode}`;
+                        }
+                        
+                        // 设置视频源，这将开始加载元数据
+                        videoElement.src = videoUrl;
+                        videoPreview.style.display = 'block';
+                    }
+                } else if (isImage) {
+                    const imgElement = imagePreview.querySelector('img');
+                    let imgUrl = `/share/download/${currentFileName}?code=${shareCode}`;
+                    if (isProtected) {
+                        const extractCode = document.getElementById('share-code').value.trim();
+                        imgUrl += `&extract_code=${extractCode}`;
+                    }
+                    imgElement.src = imgUrl;
+                    videoPreview.style.display = 'none';
+                    imagePreview.style.display = 'block';
+                }
+            } else {
+                previewContainer.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('submit-button').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('submit-button').disabled = false;
+        }
+
+        function formatSize(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return size.toFixed(2) + ' ' + units[unitIndex];
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            // 处理MySQL返回的时间格式：YYYY-MM-DD HH:mm:ss
+            const date = new Date(dateStr.replace(' ', 'T') + 'Z');
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
+
+        async function downloadFile() {
+            try {
+                if (!currentFileName) {
+                    showError('文件信息不完整');
+                    return;
+                }
+
+                // 构建下载URL
+                let downloadUrl = `/share/download/${currentFileName}`;
+                
+                // 如果是受保护的文件，需要添加提取码
+                if (shareType === 'protected') {
+                    const extractCode = document.getElementById('share-code').value.trim();
+                    if (!extractCode) {
+                        showError('请先输入提取码');
+                        return;
+                    }
+                    downloadUrl += `?code=${shareCode}&extract_code=${extractCode}`;
+                } else {
+                    downloadUrl += `?code=${shareCode}`;
+                }
+
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = currentFileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('下载失败:', error);
+                showError('下载失败，请重试');
+            }
+        }
+
+        // 添加页面卸载事件处理
+        window.addEventListener('beforeunload', function() {
+            // 关闭视频
+            const videoPlayer = document.getElementById('video-player');
+            const videoElement = document.getElementById('video-element');
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.src = '';
+            }
+        });
+
+        // 添加页面可见性变化事件处理
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // 关闭视频
+                const videoPlayer = document.getElementById('video-player');
+                const videoElement = document.getElementById('video-element');
+                if (videoElement) {
+                    videoElement.pause();
+                    videoElement.src = '';
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,13 @@
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/pine_shared.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/client.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/echo_server.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/httpserver.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/server.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/test.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/test2.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/testhttpcontext.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/testhttpserver.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/testlogger.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/testlogstream.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/edit_cache.dir
+/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/build/CMakeFiles/rebuild_cache.dir
