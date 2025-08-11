@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include "HttpResponse.h" // 需要完整类型存储 unique_ptr
 
 #define CR '\r' // 回车
 #define LF '\n' // 换行
@@ -57,6 +58,8 @@ class HttpContext
 private:
     std::shared_ptr<HttpRequest> request_; // 请求对象
     HttpRequestParseState state_;          // 当前解析状态
+    // 异步场景: 业务回调返回 false 表示暂不发送响应，将 HttpResponse 临时保存
+    std::unique_ptr<HttpResponse> deferred_response_;
 
 public:
     HttpContext();
@@ -68,4 +71,10 @@ public:
     bool GetCompleteRequest();                      // 获取完整请求
     HttpRequest *GetRequest();                      // 获取请求对象
     void ResetContextStatus();                      // 重置上下文状态
+
+    // 异步响应管理
+    void StoreDeferredResponse(const HttpResponse &resp); // 保存一份待发送响应
+    bool HasDeferredResponse() const;                      // 是否存在待发送响应
+    HttpResponse *GetDeferredResponse();                   // 取得待发送响应指针
+    void ClearDeferredResponse();                          // 清除待发送响应
 };

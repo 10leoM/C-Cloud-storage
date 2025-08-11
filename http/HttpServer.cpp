@@ -12,11 +12,12 @@
 #include <iostream>
 #include <fstream>
 
-void HttpServer::HttpDefaultCallBack(const HttpRequest &request, HttpResponse *resp)
+bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &/*conn*/, const HttpRequest &request, HttpResponse *resp)
 {
     resp->SetStatusCode(HttpStatusCode::NotFound); // 设置状态码为404 Not Found
     resp->SetStatusMessage("Not Found");           // 设置状态消息为Not Found
     resp->SetCloseConnection(true);                // 设置关闭连接为true
+    return true; // 同步立即返回
 }
 
 HttpServer::HttpServer(EventLoop *loop, const char *ip, const int port, bool auto_close_conn)
@@ -25,7 +26,7 @@ HttpServer::HttpServer(EventLoop *loop, const char *ip, const int port, bool aut
     server_ = std::make_unique<Server>(loop_, ip, port);
     server_->setOnConnectionCallback(std::bind(&HttpServer::onConnection, this, std::placeholders::_1));
     server_->setMessageCallback(std::bind(&HttpServer::onMessage, this, std::placeholders::_1));
-    SetHttpCallback(std::bind(&HttpServer::HttpDefaultCallBack, this, std::placeholders::_1, std::placeholders::_2));
+    SetHttpCallback(std::bind(&HttpServer::HttpDefaultCallBack, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 HttpServer::~HttpServer() {}
@@ -127,28 +128,58 @@ void HttpServer::onRequest(const ConnectionPtr &conn, const HttpRequest &request
     }
 
     HttpResponse response(Close);
-    responseCallback_(request, &response); // 调用用户设置的回调函数处理请求
-
-    if(response.GetBodyType() == HttpBodyType::HTML_TYPE)
-        conn->Send(response.GetMessage()); // 发送响应消息
-    else if(response.GetBodyType() == HttpBodyType::FILE_TYPE)
+    bool done = responseCallback_(conn, request, &response); // true 表示同步返回
+    auto context = conn->getContext<HttpContext>();
+    if (!done) 
     {
-        conn->Send(response.GetBeforeBody()); // 先发送响应头
-        conn->SendFile(response.GetFileFd(), response.GetContentLength()); // 发送文件内容
+        // 异步: 保存响应对象, 业务稍后填充后调用 SendDeferredResponse
+        context->StoreDeferredResponse(response);
+        return;
+    }
 
-        int ret = close(response.GetFileFd()); // 关闭文件描述符
-        if (ret < 0)
+    // 同步回包
+    if(response.GetBodyType() == HttpBodyType::HTML_TYPE) {
+        conn->Send(response.GetMessage());
+    } else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) 
+    {
+        conn->Send(response.GetBeforeBody());
+        conn->SendFile(response.GetFileFd(), response.GetContentLength());
+        int ret = close(response.GetFileFd());
+        if (ret < 0) 
         {
             LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
-        }
-        else
+        } 
+        else 
         {
             LOG_INFO << "HttpServer::onRequest : close filefd success, filefd: " << response.GetFileFd();
         }
     }
+    if (response.IsCloseConnection()) conn->HandleClose();
+}
 
-    if (response.IsCloseConnection())
-        conn->HandleClose(); // 如果响应要求关闭连接，则关闭连接
+void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
+{
+    if (!conn || conn->GetState() != connectionState::Connected) return;
+    auto context = conn->getContext<HttpContext>();
+    if (!context || !context->HasDeferredResponse()) return;
+    HttpResponse *resp = context->GetDeferredResponse();
+    if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) 
+    {
+        conn->Send(resp->GetMessage());
+    } 
+    else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) 
+    {
+        conn->Send(resp->GetBeforeBody());
+        conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
+        int ret = close(resp->GetFileFd());
+        if (ret < 0) 
+        {
+            LOG_ERROR << "HttpServer::SendDeferredResponse : close filefd failed errno=" << errno;
+        }
+    }
+    bool closeConn = resp->IsCloseConnection();
+    context->ClearDeferredResponse();
+    if (closeConn) conn->HandleClose();
 }
 
 void HttpServer::SetThreadNums(int thread_nums)

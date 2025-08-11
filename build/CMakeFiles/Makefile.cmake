@@ -47,6 +47,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/client.dir/DependInfo.cmake"
   "CMakeFiles/echo_server.dir/DependInfo.cmake"
   "CMakeFiles/httpserver.dir/DependInfo.cmake"
+  "CMakeFiles/httpserver_async.dir/DependInfo.cmake"
   "CMakeFiles/server.dir/DependInfo.cmake"
   "CMakeFiles/test.dir/DependInfo.cmake"
   "CMakeFiles/test2.dir/DependInfo.cmake"

@@ -2,6 +2,7 @@
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/client.dir
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/echo_server.dir
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/httpserver.dir
+/home/citizen/cppserver/mymuduo/build/CMakeFiles/httpserver_async.dir
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/server.dir
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/test.dir
 /home/citizen/cppserver/mymuduo/build/CMakeFiles/test2.dir

@@ -169,6 +169,19 @@ httpserver/fast:
 .PHONY : httpserver/fast
 
 #=============================================================================
+# Target rules for targets named httpserver_async
+
+# Build rule for target.
+httpserver_async: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 httpserver_async
+.PHONY : httpserver_async
+
+# fast build rule for target.
+httpserver_async/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_async.dir/build.make CMakeFiles/httpserver_async.dir/build
+.PHONY : httpserver_async/fast
+
+#=============================================================================
 # Target rules for targets named server
 
 # Build rule for target.
@@ -848,6 +861,30 @@ test/httpserver.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver.dir/build.make CMakeFiles/httpserver.dir/test/httpserver.cpp.s
 .PHONY : test/httpserver.cpp.s
 
+test/httpserver_async.o: test/httpserver_async.cpp.o
+.PHONY : test/httpserver_async.o
+
+# target to build an object file
+test/httpserver_async.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_async.dir/build.make CMakeFiles/httpserver_async.dir/test/httpserver_async.cpp.o
+.PHONY : test/httpserver_async.cpp.o
+
+test/httpserver_async.i: test/httpserver_async.cpp.i
+.PHONY : test/httpserver_async.i
+
+# target to preprocess a source file
+test/httpserver_async.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_async.dir/build.make CMakeFiles/httpserver_async.dir/test/httpserver_async.cpp.i
+.PHONY : test/httpserver_async.cpp.i
+
+test/httpserver_async.s: test/httpserver_async.cpp.s
+.PHONY : test/httpserver_async.s
+
+# target to generate assembly for a file
+test/httpserver_async.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_async.dir/build.make CMakeFiles/httpserver_async.dir/test/httpserver_async.cpp.s
+.PHONY : test/httpserver_async.cpp.s
+
 test/server.o: test/server.cpp.o
 .PHONY : test/server.o
 
@@ -1099,6 +1136,7 @@ help:
 	@echo "... client"
 	@echo "... echo_server"
 	@echo "... httpserver"
+	@echo "... httpserver_async"
 	@echo "... pine_shared"
 	@echo "... server"
 	@echo "... test"
@@ -1180,6 +1218,9 @@ help:
 	@echo "... test/httpserver.o"
 	@echo "... test/httpserver.i"
 	@echo "... test/httpserver.s"
+	@echo "... test/httpserver_async.o"
+	@echo "... test/httpserver_async.i"
+	@echo "... test/httpserver_async.s"
 	@echo "... test/server.o"
 	@echo "... test/server.i"
 	@echo "... test/server.s"

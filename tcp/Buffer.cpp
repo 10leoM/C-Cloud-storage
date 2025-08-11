@@ -158,7 +158,7 @@ ssize_t Buffer::readFd(int fd, int *savedErrno) {
     } else {
         write_index_ += writable;
         size_t appendLen = static_cast<size_t>(n) - writable;
-        Append(extrabuf, appendLen);
+        Append(extrabuf, appendLen);                    // Append内部会检查是否有足够空间
     }
     return n;
 }

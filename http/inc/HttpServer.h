@@ -19,20 +19,22 @@ class HttpServer
 {
 public:
     typedef std::shared_ptr<Connection> ConnectionPtr;
-    typedef std::function<void(const HttpRequest &, HttpResponse *)> HttpResponseCallback;
+    // 回调签名: (连接, 请求, 响应*) -> bool; true=同步发送; false=异步稍后调用 SendDeferredResponse
+    typedef std::function<bool(const ConnectionPtr &, const HttpRequest &, HttpResponse *)> HttpResponseCallback;
     DISALLOW_COPY_AND_MOVE(HttpServer);
 
     HttpServer(EventLoop *loop, const char *ip, const int port, bool auto_close_conn = true);
     ~HttpServer();
 
-    void SetHttpCallback(const HttpResponseCallback &cb);                     // 设置HTTP响应回调函数
-    void HttpDefaultCallBack(const HttpRequest &request, HttpResponse *resp); // 设置默认的HTTP响应回调函数，不做任何处理
+    void SetHttpCallback(const HttpResponseCallback &cb);                     // 设置HTTP响应回调函数 (同步/异步)
+    bool HttpDefaultCallBack(const ConnectionPtr &conn, const HttpRequest &request, HttpResponse *resp); // 默认回调, 返回true表示同步发送
 
     void start(); // 启动服务器
 
     void onConnection(const ConnectionPtr &conn);                          // 新连接信息
     void onMessage(const ConnectionPtr &conn);                             // 处理接收到的消息，到onRequest函数处理
-    void onRequest(const ConnectionPtr &conn, const HttpRequest &request); // 处理HTTP请求
+    void onRequest(const ConnectionPtr &conn, const HttpRequest &request); // 处理HTTP请求，支持同步/异步
+    void SendDeferredResponse(const ConnectionPtr &conn);                  // 业务异步完成后触发发送，使用定时器延迟发送
 
     void SetThreadNums(int thread_nums);
 

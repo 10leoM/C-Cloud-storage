@@ -372,3 +372,23 @@ bool HttpContext::ParseRequest(const char *begin)
 {
     return ParseRequest(begin, strlen(begin));
 }
+
+void HttpContext::StoreDeferredResponse(const HttpResponse &resp)
+{
+    deferred_response_ = std::make_unique<HttpResponse>(resp);
+}
+
+bool HttpContext::HasDeferredResponse() const
+{
+    return static_cast<bool>(deferred_response_);
+}
+
+HttpResponse *HttpContext::GetDeferredResponse()
+{
+    return deferred_response_.get();
+}
+
+void HttpContext::ClearDeferredResponse()
+{
+    deferred_response_.reset();
+}

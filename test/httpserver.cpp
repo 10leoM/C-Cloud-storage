@@ -134,7 +134,7 @@ void DownloadFile(const std::string &filename, HttpResponse *response)
     }
 }
 
-void HttpResponseCallback(const HttpRequest &request, HttpResponse *response)
+bool HttpResponseCallback(const std::shared_ptr<Connection> &/*conn*/, const HttpRequest &request, HttpResponse *response)
 {
     LOG_INFO << request.GetMethodString() << " " << request.GetUrl();
     std::string url = request.GetUrl();
@@ -247,9 +247,10 @@ void HttpResponseCallback(const HttpRequest &request, HttpResponse *response)
             response->SetStatusCode(HttpStatusCode::k302K);
             response->SetStatusMessage("Moved Temporarily");
             response->SetContentType("text/html");
-            response->AddHeader("Location", "/fileserver");
+        response->AddHeader("Location", "/fileserver");
         }
     }
+    return true; // 同步发送
 }
 
 std::unique_ptr<AsyncLogging> asynclog;

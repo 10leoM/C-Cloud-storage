@@ -225,6 +225,9 @@ CMakeFiles/pine_shared.dir/tcp/Channel.cpp.o: \
  /usr/include/x86_64-linux-gnu/sys/time.h \
  /home/citizen/cppserver/mymuduo/timer/inc/Timer.h \
  /home/citizen/cppserver/mymuduo/http/inc/HttpContext.h \
+ /home/citizen/cppserver/mymuduo/http/inc/HttpResponse.h \
+ /usr/include/c++/13/map /usr/include/c++/13/bits/stl_map.h \
+ /usr/include/c++/13/bits/stl_multimap.h \
  /home/citizen/cppserver/mymuduo/tcp/inc/InetAddress.h \
  /usr/include/arpa/inet.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/sys/socket.h \
