@@ -76,7 +76,7 @@ int main()
 
     char buf[BUFFER_SIZE]; // 在这个版本，buf大小必须大于或等于服务器端buf大小，不然会出错，想想为什么？
     bzero(&buf, sizeof(buf));
-    strcpy(buf, str1.c_str());
+    strcpy(buf, str.c_str());
     ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
     if (write_bytes == -1)
     {

@@ -83,6 +83,7 @@ public:
     // 请求体
     void SetBody(const std::string &str);
     const std::string &GetBody() const;
+    void AppendBody(const char* data, size_t len); // 追加请求体（增量解析用）
 
     // 工具
     static std::string UrlDecode(const std::string &src);

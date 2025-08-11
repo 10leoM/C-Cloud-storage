@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/home/citizen/cppserver/mymuduo/tcp/inc -I/home/citizen/cppserver/mymuduo/http/inc -I/home/citizen/cppserver/mymuduo/timer/inc -I/home/citizen/cppserver/mymuduo/base/inc -I/home/citizen/cppserver/mymuduo/log/inc
 
-CXX_FLAGS =  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes -g -O0 -ggdb 
+CXX_FLAGS =  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes
 

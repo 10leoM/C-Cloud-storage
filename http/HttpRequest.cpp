@@ -175,6 +175,11 @@ const std::string &HttpRequest::GetBody() const
     return body_;
 }
 
+void HttpRequest::AppendBody(const char* data, size_t len)
+{
+    if (data && len) body_.append(data, len);
+}
+
 // URL Decode 实现（处理 %XX 与 + -> space）
 std::string HttpRequest::UrlDecode(const std::string &src)
 {

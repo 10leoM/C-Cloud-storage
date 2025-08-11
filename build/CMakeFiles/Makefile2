@@ -72,7 +72,9 @@ all: CMakeFiles/server.dir/all
 all: CMakeFiles/test.dir/all
 all: CMakeFiles/test2.dir/all
 all: CMakeFiles/test_buffer_crlf.dir/all
+all: CMakeFiles/test_http_incremental.dir/all
 all: CMakeFiles/testhttpcontext.dir/all
+all: CMakeFiles/testhttpincremental.dir/all
 all: CMakeFiles/testhttpserver.dir/all
 all: CMakeFiles/testlogger.dir/all
 all: CMakeFiles/testlogstream.dir/all
@@ -92,7 +94,9 @@ clean: CMakeFiles/server.dir/clean
 clean: CMakeFiles/test.dir/clean
 clean: CMakeFiles/test2.dir/clean
 clean: CMakeFiles/test_buffer_crlf.dir/clean
+clean: CMakeFiles/test_http_incremental.dir/clean
 clean: CMakeFiles/testhttpcontext.dir/clean
+clean: CMakeFiles/testhttpincremental.dir/clean
 clean: CMakeFiles/testhttpserver.dir/clean
 clean: CMakeFiles/testlogger.dir/clean
 clean: CMakeFiles/testlogstream.dir/clean
@@ -333,13 +337,39 @@ CMakeFiles/test_buffer_crlf.dir/clean:
 .PHONY : CMakeFiles/test_buffer_crlf.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/test_http_incremental.dir
+
+# All Build rule for target.
+CMakeFiles/test_http_incremental.dir/all: CMakeFiles/pine_shared.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=41,42 "Built target test_http_incremental"
+.PHONY : CMakeFiles/test_http_incremental.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_http_incremental.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/citizen/cppserver/mymuduo/build/CMakeFiles 26
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_http_incremental.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/citizen/cppserver/mymuduo/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_http_incremental.dir/rule
+
+# Convenience name for target.
+test_http_incremental: CMakeFiles/test_http_incremental.dir/rule
+.PHONY : test_http_incremental
+
+# clean rule for target.
+CMakeFiles/test_http_incremental.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/clean
+.PHONY : CMakeFiles/test_http_incremental.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/testhttpcontext.dir
 
 # All Build rule for target.
 CMakeFiles/testhttpcontext.dir/all: CMakeFiles/pine_shared.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpcontext.dir/build.make CMakeFiles/testhttpcontext.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpcontext.dir/build.make CMakeFiles/testhttpcontext.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=41,42 "Built target testhttpcontext"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=43,44 "Built target testhttpcontext"
 .PHONY : CMakeFiles/testhttpcontext.dir/all
 
 # Build rule for subdir invocation for target.
@@ -359,13 +389,39 @@ CMakeFiles/testhttpcontext.dir/clean:
 .PHONY : CMakeFiles/testhttpcontext.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/testhttpincremental.dir
+
+# All Build rule for target.
+CMakeFiles/testhttpincremental.dir/all: CMakeFiles/pine_shared.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=45,46 "Built target testhttpincremental"
+.PHONY : CMakeFiles/testhttpincremental.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/testhttpincremental.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/citizen/cppserver/mymuduo/build/CMakeFiles 26
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/testhttpincremental.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/citizen/cppserver/mymuduo/build/CMakeFiles 0
+.PHONY : CMakeFiles/testhttpincremental.dir/rule
+
+# Convenience name for target.
+testhttpincremental: CMakeFiles/testhttpincremental.dir/rule
+.PHONY : testhttpincremental
+
+# clean rule for target.
+CMakeFiles/testhttpincremental.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/clean
+.PHONY : CMakeFiles/testhttpincremental.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/testhttpserver.dir
 
 # All Build rule for target.
 CMakeFiles/testhttpserver.dir/all: CMakeFiles/pine_shared.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpserver.dir/build.make CMakeFiles/testhttpserver.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpserver.dir/build.make CMakeFiles/testhttpserver.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=43,44 "Built target testhttpserver"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=47,48 "Built target testhttpserver"
 .PHONY : CMakeFiles/testhttpserver.dir/all
 
 # Build rule for subdir invocation for target.
@@ -391,7 +447,7 @@ CMakeFiles/testhttpserver.dir/clean:
 CMakeFiles/testlogger.dir/all: CMakeFiles/pine_shared.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testlogger.dir/build.make CMakeFiles/testlogger.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testlogger.dir/build.make CMakeFiles/testlogger.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=45,46 "Built target testlogger"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=49,50 "Built target testlogger"
 .PHONY : CMakeFiles/testlogger.dir/all
 
 # Build rule for subdir invocation for target.
@@ -417,7 +473,7 @@ CMakeFiles/testlogger.dir/clean:
 CMakeFiles/testlogstream.dir/all: CMakeFiles/pine_shared.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testlogstream.dir/build.make CMakeFiles/testlogstream.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testlogstream.dir/build.make CMakeFiles/testlogstream.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=47,48 "Built target testlogstream"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/citizen/cppserver/mymuduo/build/CMakeFiles --progress-num=51,52 "Built target testlogstream"
 .PHONY : CMakeFiles/testlogstream.dir/all
 
 # Build rule for subdir invocation for target.

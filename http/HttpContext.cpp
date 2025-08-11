@@ -1,13 +1,19 @@
 #include "HttpContext.h"
 #include "HttpRequest.h"
-#include <string.h>
+#include "HttpResponse.h"
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
 
-HttpContext::HttpContext() : state_(HttpRequestParseState::START)
+HttpContext::HttpContext()
+    : request_(std::make_shared<HttpRequest>()), state_(HttpRequestParseState::START) {}
+
+HttpContext::~HttpContext() = default;
+
+HttpRequest *HttpContext::GetRequest()
 {
-    request_ = std::make_shared<HttpRequest>();
+    return request_.get();
 }
-
-HttpContext::~HttpContext() {}
 
 bool HttpContext::GetCompleteRequest()
 {
@@ -16,350 +22,102 @@ bool HttpContext::GetCompleteRequest()
 
 void HttpContext::ResetContextStatus()
 {
+    request_.reset(new HttpRequest());
     state_ = HttpRequestParseState::START;
+    deferred_response_.reset();
+    headers_complete_ = false;
+    body_complete_ = false;
+    chunked_ = false;
+    content_length_ = 0;
+    received_body_bytes_ = 0;
+    chunk_state_ = ChunkState::SIZE;
+    current_chunk_size_ = 0;
+    chunk_size_buf_.clear();
 }
-
-HttpRequest *HttpContext::GetRequest()
-{
-    return request_.get();
-}
-
 bool HttpContext::ParseRequest(const char *begin, int size)
 {
-    char *start = static_cast<char *>(const_cast<char *>(begin));
+    // 为向后兼容，仍旧一次性解析（首阶段：请求行与头部）。
+    // 简化：借用现有逐字符状态机逻辑，直到 CRLFCRLF 结束，然后设置 flags。
+    char *start = const_cast<char*>(begin);
     char *end = start;
-    char *colon = end; // 用于URL参数和请求头的中间位置
-
-    // 逐字符解析请求
+    char *colon = end;
     while (state_ != HttpRequestParseState::INVALID && state_ != HttpRequestParseState::COMPLETE && end - begin <= size)
     {
-        char ch = *end; // 当前字符
+        char ch = *end;
         switch (state_)
         {
         case HttpRequestParseState::START:
-        {
-            if (ch == CR || ch == LF || isblank(ch))
-            {
-                // 遇到空格、换行或回车，继续解析
-            }
-            else if (isupper(ch))
-            {
-                // 遇到大写字母，说明遇到了METHOD
-                state_ = HttpRequestParseState::METHOD;
-                start = end; // 更新start位置
-            }
-            else
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
+            if (!(ch == CR || ch == LF || isblank(ch))) {
+                if (isupper(ch)) { state_ = HttpRequestParseState::METHOD; start = end; } else state_ = HttpRequestParseState::INVALID; }
             break;
-        }
-
         case HttpRequestParseState::METHOD:
-        {
-            if (isupper(ch))
-            {
-                // 如果是大写字母，则继续
-            }
-            else if (isblank(ch))
-            {
-                // 遇到空格表明，METHOD方法解析结束，当前处于即将解析URL
-                request_->SetMethod(std::string(start, end));
-                state_ = HttpRequestParseState::BEFORE_URL;
-                start = end + 1; // 更新下一个指标的位置
-            }
+            if (isblank(ch)) { request_->SetMethod(std::string(start, end)); state_ = HttpRequestParseState::BEFORE_URL; start = end + 1; }
             break;
-        }
-
         case HttpRequestParseState::BEFORE_URL:
-        {
-            // 对请求连接前的处理，请求连接以'/'开头
-            if (ch == '/')
-            {
-                // 遇到/ 说明遇到了URL，开始解析
-                state_ = HttpRequestParseState::IN_URL;
-                start = end; // 更新start位置
-            }
-            else if (isblank(ch))
-            {
-                // 遇到空格，继续
-            }
-            else
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
-            break;
-        }
-
+            if (ch == '/') { state_ = HttpRequestParseState::IN_URL; start = end; }
+            else if (!isblank(ch)) state_ = HttpRequestParseState::INVALID; break;
         case HttpRequestParseState::IN_URL:
-        {
-            // 进入url中
-            if (ch == '?')
-            {
-                // 遇到参数解析
-                request_->SetUrl(std::string(start, end));
-                start = end + 1; // 更新start位置
-                state_ = HttpRequestParseState::BEFORE_URL_PARAM_KEY;
-            }
-            else if (isblank(ch))
-            {
-                // url解析结束
-                request_->SetUrl(std::string(start, end));
-                start = end + 1; // 更新start位置
-                state_ = HttpRequestParseState::BEFORE_PROTOCOL;
-            }
+            if (ch == '?') { request_->SetUrl(std::string(start, end)); start = end + 1; state_ = HttpRequestParseState::BEFORE_URL_PARAM_KEY; }
+            else if (isblank(ch)) { request_->SetUrl(std::string(start, end)); start = end + 1; state_ = HttpRequestParseState::BEFORE_PROTOCOL; }
             break;
-        }
-
         case HttpRequestParseState::BEFORE_URL_PARAM_KEY:
-        {
-            if (ch == CR || ch == LF || isblank(ch))
-            {
-                // 当开始进入url params时，遇到了空格，换行等，则不合法
-                state_ = HttpRequestParseState::INVALID;
-            }
-            else
-            {
-                state_ = HttpRequestParseState::URL_PARAM_KEY;
-            }
-            break;
-        }
-
+            if (ch == CR || ch == LF || isblank(ch)) state_ = HttpRequestParseState::INVALID; else state_ = HttpRequestParseState::URL_PARAM_KEY; break;
         case HttpRequestParseState::URL_PARAM_KEY:
-        {
-            if (ch == '=')
-            {
-                // 遇到= 说明一个key解析完成
-                colon = end;
-                state_ = HttpRequestParseState::BEFORE_URL_PARAM_VALUE;
-            }
-            else if (isblank(ch))
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
-            break;
-        }
-
+            if (ch == '=') { colon = end; state_ = HttpRequestParseState::BEFORE_URL_PARAM_VALUE; }
+            else if (isblank(ch)) state_ = HttpRequestParseState::INVALID; break;
         case HttpRequestParseState::BEFORE_URL_PARAM_VALUE:
-        {
-            if (ch == CR || ch == LF || isblank(ch))
-            {
-                // 当开始进入url params时，遇到了空格，换行等，则不合法
-                state_ = HttpRequestParseState::INVALID;
-            }
-            else
-            {
-                // 进入URL参数值的解析
-                state_ = HttpRequestParseState::URL_PARAM_VALUE;
-            }
-        }
-
+            if (ch == CR || ch == LF || isblank(ch)) state_ = HttpRequestParseState::INVALID; else state_ = HttpRequestParseState::URL_PARAM_VALUE; break;
         case HttpRequestParseState::URL_PARAM_VALUE:
-        {
-            if (ch == '&')
-            {
-                // 遇到& 说明一个URL参数解析完成，还有下一个参数
-                state_ = HttpRequestParseState::BEFORE_URL_PARAM_KEY;
-                request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, end));
-                start = end + 1; // 更新start位置
-            }
-            else if (isblank(ch))
-            {
-                // 遇到空格，说明URL参数解析结束
-                state_ = HttpRequestParseState::BEFORE_PROTOCOL;
-                request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, end));
-                start = end + 1; // 更新start位置
-            }
+            if (ch == '&') { request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, end)); start = end + 1; state_ = HttpRequestParseState::BEFORE_URL_PARAM_KEY; }
+            else if (isblank(ch)) { request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, end)); start = end + 1; state_ = HttpRequestParseState::BEFORE_PROTOCOL; }
             break;
-        }
-
         case HttpRequestParseState::BEFORE_PROTOCOL:
-        {
-            if (isblank(ch))
-            {
-                // 继续
-            }
-            else
-            {
-                state_ = HttpRequestParseState::PROTOCOL;
-                start = end; // 更新start位置
-            }
-            break;
-        }
-
+            if (!isblank(ch)) { state_ = HttpRequestParseState::PROTOCOL; start = end; } break;
         case HttpRequestParseState::PROTOCOL:
-        {
-            if (ch == '/')
-            {
-                // 遇到/ 说明协议解析结束
-                request_->SetProtocol(std::string(start, end));
-                start = end + 1; // 更新start位置
-                state_ = HttpRequestParseState::BEFORE_VERSION;
-            }
-            else
-            {
-                // 继续
-            }
-            break;
-        }
-
+            if (ch == '/') { request_->SetProtocol(std::string(start, end)); start = end + 1; state_ = HttpRequestParseState::BEFORE_VERSION; } break;
         case HttpRequestParseState::BEFORE_VERSION:
-        {
-            if (isdigit(ch))
-            {
-                // 遇到数字，说明版本开始
-                state_ = HttpRequestParseState::VERSION;
-                start = end; // 更新start位置
-            }
-            else
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
-        }
-
+            if (isdigit(ch)) { state_ = HttpRequestParseState::VERSION; start = end; } else state_ = HttpRequestParseState::INVALID; break;
         case HttpRequestParseState::VERSION:
-        {
-            if (ch == CR)
-            {
-                // 遇到回车或换行，说明版本解析结束
-                request_->SetVersion(std::string(start, end));
-                start = end + 1; // 更新start位置
-                state_ = HttpRequestParseState::WHEN_CR;
-            }
-            else if (ch == '.' || isdigit(ch))
-            {
-                // 遇到数字或. 说明版本号解析中
-            }
-            else
-            {
-                state_ = HttpRequestParseState::INVALID_VERSION;
-            }
-            break;
-        }
-
+            if (ch == CR) { request_->SetVersion(std::string(start, end)); start = end + 1; state_ = HttpRequestParseState::WHEN_CR; }
+            else if (!(ch == '.' || isdigit(ch))) state_ = HttpRequestParseState::INVALID_VERSION; break;
         case HttpRequestParseState::WHEN_CR:
-        {
-            if (ch == LF)
-            {
-                // 遇到换行，说明该行结束
-                state_ = HttpRequestParseState::CR_LF;
-                start = end + 1; // 更新start位置
-            }
-            else
-            {
-                // 遇到其他字符，说明无效请求
-                state_ = HttpRequestParseState::INVALID;
-            }
-            break;
-        }
-
+            if (ch == LF) { state_ = HttpRequestParseState::CR_LF; start = end + 1; } else state_ = HttpRequestParseState::INVALID; break;
         case HttpRequestParseState::CR_LF:
-        {
-            // std::cout << "111" << ch << std::endl;
-            if (ch == CR)
-            {
-                // 说明遇到了空行，大概率时结束了
-                state_ = HttpRequestParseState::CR_LF_CR;
-                // start  = end + 1;
-                // std::cout << "a:" << (*start == '\n') << std::endl;
-                // std::cout << "b:" << (*end == '\r') << std::endl;
-            }
-            else if (isblank(ch))
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
-            else
-            {
-                state_ = HttpRequestParseState::HEADER_KEY;
-            }
-            break;
-        }
-
-        // 需要注意的是，对header的解析并不鲁棒
+            if (ch == CR) { state_ = HttpRequestParseState::CR_LF_CR; }
+            else if (isblank(ch)) state_ = HttpRequestParseState::INVALID; else state_ = HttpRequestParseState::HEADER_KEY; break;
         case HttpRequestParseState::HEADER_KEY:
-        {
-            if (ch == ':')
-            {
-                colon = end;
-                state_ = HttpRequestParseState::HEADER_VALUE;
-            }
+            if (ch == ':') { colon = end; state_ = HttpRequestParseState::HEADER_VALUE; }
             break;
-        }
-
         case HttpRequestParseState::HEADER_VALUE:
-        {
-            if (isblank(ch))
-            {
-                // 继续解析
-            }
-            else if (ch == CR)
-            {
-                request_->AddHeader(std::string(start, colon), std::string(colon + 2, end));
-                start = end + 1;
-                state_ = HttpRequestParseState::WHEN_CR;
-            }
+            if (ch == CR) { request_->AddHeader(std::string(start, colon), std::string(colon + 2, end)); start = end + 1; state_ = HttpRequestParseState::WHEN_CR; }
             break;
-        }
-
         case HttpRequestParseState::CR_LF_CR:
-        {
-            // 判断是否需要解析请求体
-            //
-            // std::cout << "c:" << (ch == '\n') << std::endl;
-            // std::cout << "size:" << end-begin << std::endl;
-            if (ch == LF)
-            {
-                // 这就意味着遇到了空行，要进行解析请求体了
-                if (request_->GetHeaders().count("Content-Length"))
-                {
-                    if (atoi(request_->GetHeader("Content-Length").c_str()) > 0)
-                    {
-                        state_ = HttpRequestParseState::BODY;
-                    }
-                    else
-                    {
-                        state_ = HttpRequestParseState::COMPLETE;
-                    }
+            if (ch == LF) {
+                headers_complete_ = true;
+                // 判断 body 模式
+                auto &hs = request_->GetHeaders();
+                if (hs.count("Transfer-Encoding") && hs.at("Transfer-Encoding") == "chunked") { chunked_ = true; state_ = HttpRequestParseState::BODY; }
+                else if (hs.count("Content-Length")) { content_length_ = static_cast<size_t>(::atoll(request_->GetHeader("Content-Length").c_str())); if (content_length_ > 0) state_ = HttpRequestParseState::BODY; else { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; } }
+                else { // 无长度：假定无 body
+                    body_complete_ = true; state_ = HttpRequestParseState::COMPLETE;
                 }
-                else
-                {
-                    if (end - begin < size)
-                    {
-                        state_ = HttpRequestParseState::BODY;
-                    }
-                    else
-                    {
-                        state_ = HttpRequestParseState::COMPLETE;
-                    }
-                }
-                start = end + 1;
-            }
-            else
-            {
-                state_ = HttpRequestParseState::INVALID;
-            }
-            break;
-        }
-
+            } else state_ = HttpRequestParseState::INVALID; break;
         case HttpRequestParseState::BODY:
-        {
-            int bodylength = size - (end - begin);
-            // std::cout << "bodylength:" << bodylength << std::endl;
-            request_->SetBody(std::string(start, start + bodylength));
-            if(bodylength >= atoi(request_->GetHeader("Content-Length").c_str()))
+            // 剩余全部视作 body 一次性吸收（兼容旧调用）
             {
-                state_ = HttpRequestParseState::COMPLETE;
+                size_t body_len = static_cast<size_t>(begin + size - end);
+                if (body_len) request_->AppendBody(end, body_len);
+                received_body_bytes_ += body_len;
+                if (chunked_) { body_complete_ = true; } // 旧接口不支持增量 chunk 直接标记完成
+                else if (received_body_bytes_ >= content_length_) { body_complete_ = true; }
+                if (body_complete_) state_ = HttpRequestParseState::COMPLETE;
+                end = const_cast<char*>(begin) + size; // 跳出循环
+                continue;
             }
-            break;
-        }
-
         default:
-        {
-            state_ = HttpRequestParseState::INVALID;
-            break;
+            state_ = HttpRequestParseState::INVALID; break;
         }
-        }
-        end++; // 移动到下一个字符
+        ++end;
     }
     return state_ == HttpRequestParseState::COMPLETE || state_ == HttpRequestParseState::BODY;
 }
@@ -370,7 +128,7 @@ bool HttpContext::ParseRequest(const std::string &request)
 }
 bool HttpContext::ParseRequest(const char *begin)
 {
-    return ParseRequest(begin, strlen(begin));
+    return ParseRequest(begin, ::strlen(begin));
 }
 
 void HttpContext::StoreDeferredResponse(const HttpResponse &resp)
@@ -391,4 +149,124 @@ HttpResponse *HttpContext::GetDeferredResponse()
 void HttpContext::ClearDeferredResponse()
 {
     deferred_response_.reset();
+}
+
+bool HttpContext::ParseIncremental(const char* data, size_t len)
+{
+    size_t dummy = 0; return ParseIncremental(data, len, dummy);
+}
+
+bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consumedBytes)
+{
+    consumedBytes = 0;
+    // 若头还未完成，逐行处理
+    if (!headers_complete_) {
+        // 查找 CRLF 行
+        while (consumedBytes < len && !headers_complete_) {
+            const char* lineStart = data + consumedBytes;
+            const char* cr = static_cast<const char*>(memchr(lineStart, '\r', len - consumedBytes));
+            if (!cr || (cr + 1 >= data + len)) {
+                // 行尚未完整
+                return true; // 等待更多数据
+            }
+            if (*(cr + 1) != '\n') { state_ = HttpRequestParseState::INVALID; return false; }
+            size_t lineLen = static_cast<size_t>(cr - lineStart); // 不含 CR
+            std::string line(lineStart, lineLen);
+            consumedBytes += lineLen + 2; // 跳过 CRLF
+            if (state_ == HttpRequestParseState::START) state_ = HttpRequestParseState::METHOD;
+            if (line.empty()) {
+                // 空行 -> 头结束
+                headers_complete_ = true;
+                auto &hs = request_->GetHeaders();
+                if (hs.count("Transfer-Encoding") && hs.at("Transfer-Encoding") == "chunked") { chunked_ = true; }
+                else if (hs.count("Content-Length")) { content_length_ = static_cast<size_t>(::atoll(request_->GetHeader("Content-Length").c_str())); }
+                if ((!chunked_ && content_length_ == 0)) { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; }
+                break;
+            }
+            if (request_->GetMethod() == HttpMethod::kInvalid) {
+                // 第一行: 请求行  METHOD SP URL SP HTTP/1.x
+                size_t p1 = line.find(' '); if (p1 == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
+                size_t p2 = line.find(' ', p1 + 1); if (p2 == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
+                request_->SetMethod(line.substr(0, p1));
+                request_->SetUrl(line.substr(p1 + 1, p2 - p1 - 1));
+                std::string proto = line.substr(p2 + 1);
+                // proto 形如 HTTP/1.1
+                if (proto.rfind("HTTP/", 0) == 0) request_->SetVersion(proto.substr(5));
+            } else {
+                // 头行 key: value
+                size_t colon = line.find(':');
+                if (colon == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
+                size_t vstart = colon + 1;
+                while (vstart < line.size() && (line[vstart] == ' ' || line[vstart] == '\t')) ++vstart;
+                std::string key = line.substr(0, colon);
+                std::string value = line.substr(vstart);
+                request_->AddHeader(key, value);
+            }
+        }
+    }
+    if (headers_complete_ && !body_complete_) {
+        size_t bodyConsumed = 0;
+        size_t remain = len - consumedBytes;
+        if (chunked_) {
+            if (!ParseChunkedBlock(data + consumedBytes, remain, bodyConsumed)) return false;
+        } else if (content_length_ > 0) {
+            if (!ParseBodyBlock(data + consumedBytes, remain, bodyConsumed)) return false;
+        }
+        consumedBytes += bodyConsumed;
+    }
+    return true;
+}
+
+bool HttpContext::ParseBodyBlock(const char* data, size_t len, size_t &consumed)
+{
+    size_t need = content_length_ - received_body_bytes_;
+    size_t take = std::min(need, len);
+    if (take) {
+        request_->AppendBody(data, take);
+        received_body_bytes_ += take;
+    }
+    consumed = take;
+    if (received_body_bytes_ >= content_length_) { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; }
+    return true;
+}
+
+bool HttpContext::ParseChunkedBlock(const char* data, size_t len, size_t &consumed)
+{
+    consumed = 0;
+    while (consumed < len && !body_complete_) {
+        switch (chunk_state_) {
+        case ChunkState::SIZE:
+            if (data[consumed] == '\r') { chunk_state_ = ChunkState::SIZE_CR; }
+            else { chunk_size_buf_.push_back(data[consumed]); }
+            ++consumed; break;
+        case ChunkState::SIZE_CR:
+            if (data[consumed] != '\n') return false; // 协议错误
+            // 解析十六进制块大小
+            current_chunk_size_ = strtoul(chunk_size_buf_.c_str(), nullptr, 16);
+            chunk_size_buf_.clear();
+            if (current_chunk_size_ == 0) { chunk_state_ = ChunkState::TRAILERS; }
+            else { chunk_state_ = ChunkState::DATA; }
+            ++consumed; break;
+        case ChunkState::DATA: {
+            size_t remain = current_chunk_size_;
+            size_t take = std::min(remain, len - consumed);
+            request_->AppendBody(data + consumed, take);
+            current_chunk_size_ -= take;
+            consumed += take;
+            if (current_chunk_size_ == 0) chunk_state_ = ChunkState::DATA_CR;
+            break; }
+        case ChunkState::DATA_CR:
+            if (data[consumed] != '\r') return false; ++consumed; chunk_state_ = ChunkState::DATA_LF; break;
+        case ChunkState::DATA_LF:
+            if (data[consumed] != '\n') return false; ++consumed; chunk_state_ = ChunkState::SIZE; break;
+        case ChunkState::TRAILERS:
+            // 读到 CRLF 结束（忽略实际 trailer 内容）
+            if (data[consumed] == '\r') { chunk_state_ = ChunkState::COMPLETE; }
+            ++consumed; break;
+        case ChunkState::COMPLETE:
+            if (data[consumed] == '\n') { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; ++consumed; }
+            else return false; break;
+        }
+    }
+    return true;
 }

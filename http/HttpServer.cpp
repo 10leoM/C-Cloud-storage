@@ -64,29 +64,34 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
 {
     if (conn->GetState() == connectionState::Connected)
     {
-        // 获取或创建 HttpContext
         auto context = conn->getContext<HttpContext>();
         if (!context)
         {
             context = std::make_shared<HttpContext>();
             conn->setContext(context);
         }
-        if (!context->ParseRequest(conn->GetReadBuffer()->Peek(), conn->GetReadBuffer()->GetReadablebytes()))
-        {
-            std::cout<< "ParseRequest failed, message: " << conn->GetReadBuffer()->PeekAllAsString() << std::endl;
-            // 解析请求失败，发送400 Bad Request响应
-            conn->Send("HTTP/1.1 400 Bad Request\r\n\r\n");
-            conn->HandleClose();
-        }
-        else
-        {
-            // 解析成功
-            if (context->GetCompleteRequest())
-            {
-                // 获取完整请求并处理
-                onRequest(conn, *context->GetRequest());
-                context->ResetContextStatus(); // 重置上下文状态
+        // 支持 HTTP pipelining: 循环解析缓冲中的多个请求
+        while (true) {
+            if (!context->HeadersComplete() || !context->BodyComplete()) {
+                size_t consumed = 0;
+                if (!context->ParseIncremental(conn->GetReadBuffer()->Peek(), conn->GetReadBuffer()->GetReadablebytes(), consumed)) {
+                    conn->Send("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+                    conn->HandleClose();
+                    return;
+                }
+                if (consumed) conn->GetReadBuffer()->Retrieve(consumed);
             }
+            if (context->GetCompleteRequest()) {
+                onRequest(conn, *context->GetRequest());
+                // 如果连接已被业务标记关闭则不再解析后续
+                if (conn->GetState() != connectionState::Connected) return;
+                context->ResetContextStatus();
+                // 若缓冲区尚有数据则继续下一轮；否则退出
+                if (conn->GetReadBuffer()->GetReadablebytes() == 0) break;
+                continue; // 尝试解析下一条
+            }
+            // 未完成且没有更多数据可读，等待下一次 onMessage
+            break;
         }
     }
 }

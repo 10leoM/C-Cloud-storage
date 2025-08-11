@@ -234,6 +234,19 @@ test_buffer_crlf/fast:
 .PHONY : test_buffer_crlf/fast
 
 #=============================================================================
+# Target rules for targets named test_http_incremental
+
+# Build rule for target.
+test_http_incremental: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_http_incremental
+.PHONY : test_http_incremental
+
+# fast build rule for target.
+test_http_incremental/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/build
+.PHONY : test_http_incremental/fast
+
+#=============================================================================
 # Target rules for targets named testhttpcontext
 
 # Build rule for target.
@@ -245,6 +258,19 @@ testhttpcontext: cmake_check_build_system
 testhttpcontext/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpcontext.dir/build.make CMakeFiles/testhttpcontext.dir/build
 .PHONY : testhttpcontext/fast
+
+#=============================================================================
+# Target rules for targets named testhttpincremental
+
+# Build rule for target.
+testhttpincremental: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 testhttpincremental
+.PHONY : testhttpincremental
+
+# fast build rule for target.
+testhttpincremental/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/build
+.PHONY : testhttpincremental/fast
 
 #=============================================================================
 # Target rules for targets named testhttpserver
@@ -981,6 +1007,30 @@ test/test_buffer_crlf.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_buffer_crlf.dir/build.make CMakeFiles/test_buffer_crlf.dir/test/test_buffer_crlf.cpp.s
 .PHONY : test/test_buffer_crlf.cpp.s
 
+test/test_http_incremental.o: test/test_http_incremental.cpp.o
+.PHONY : test/test_http_incremental.o
+
+# target to build an object file
+test/test_http_incremental.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/test/test_http_incremental.cpp.o
+.PHONY : test/test_http_incremental.cpp.o
+
+test/test_http_incremental.i: test/test_http_incremental.cpp.i
+.PHONY : test/test_http_incremental.i
+
+# target to preprocess a source file
+test/test_http_incremental.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/test/test_http_incremental.cpp.i
+.PHONY : test/test_http_incremental.cpp.i
+
+test/test_http_incremental.s: test/test_http_incremental.cpp.s
+.PHONY : test/test_http_incremental.s
+
+# target to generate assembly for a file
+test/test_http_incremental.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_http_incremental.dir/build.make CMakeFiles/test_http_incremental.dir/test/test_http_incremental.cpp.s
+.PHONY : test/test_http_incremental.cpp.s
+
 test/testhttpcontext.o: test/testhttpcontext.cpp.o
 .PHONY : test/testhttpcontext.o
 
@@ -1004,6 +1054,30 @@ test/testhttpcontext.s: test/testhttpcontext.cpp.s
 test/testhttpcontext.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpcontext.dir/build.make CMakeFiles/testhttpcontext.dir/test/testhttpcontext.cpp.s
 .PHONY : test/testhttpcontext.cpp.s
+
+test/testhttpincremental.o: test/testhttpincremental.cpp.o
+.PHONY : test/testhttpincremental.o
+
+# target to build an object file
+test/testhttpincremental.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/test/testhttpincremental.cpp.o
+.PHONY : test/testhttpincremental.cpp.o
+
+test/testhttpincremental.i: test/testhttpincremental.cpp.i
+.PHONY : test/testhttpincremental.i
+
+# target to preprocess a source file
+test/testhttpincremental.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/test/testhttpincremental.cpp.i
+.PHONY : test/testhttpincremental.cpp.i
+
+test/testhttpincremental.s: test/testhttpincremental.cpp.s
+.PHONY : test/testhttpincremental.s
+
+# target to generate assembly for a file
+test/testhttpincremental.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testhttpincremental.dir/build.make CMakeFiles/testhttpincremental.dir/test/testhttpincremental.cpp.s
+.PHONY : test/testhttpincremental.cpp.s
 
 test/testhttpserver.o: test/testhttpserver.cpp.o
 .PHONY : test/testhttpserver.o
@@ -1142,7 +1216,9 @@ help:
 	@echo "... test"
 	@echo "... test2"
 	@echo "... test_buffer_crlf"
+	@echo "... test_http_incremental"
 	@echo "... testhttpcontext"
+	@echo "... testhttpincremental"
 	@echo "... testhttpserver"
 	@echo "... testlogger"
 	@echo "... testlogstream"
@@ -1233,9 +1309,15 @@ help:
 	@echo "... test/test_buffer_crlf.o"
 	@echo "... test/test_buffer_crlf.i"
 	@echo "... test/test_buffer_crlf.s"
+	@echo "... test/test_http_incremental.o"
+	@echo "... test/test_http_incremental.i"
+	@echo "... test/test_http_incremental.s"
 	@echo "... test/testhttpcontext.o"
 	@echo "... test/testhttpcontext.i"
 	@echo "... test/testhttpcontext.s"
+	@echo "... test/testhttpincremental.o"
+	@echo "... test/testhttpincremental.i"
+	@echo "... test/testhttpincremental.s"
 	@echo "... test/testhttpserver.o"
 	@echo "... test/testhttpserver.i"
 	@echo "... test/testhttpserver.s"

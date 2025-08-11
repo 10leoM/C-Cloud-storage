@@ -33,7 +33,7 @@ bool DemoCallback(const std::shared_ptr<Connection>& conn, const HttpRequest &re
                 auto ctx = c->getContext<HttpContext>();
                 if (ctx && ctx->HasDeferredResponse()) {
                     HttpResponse* r = ctx->GetDeferredResponse();
-                    std::string body = "async result";
+                    std::string body = "async result\n";
                     r->SetBody(body);
                     r->SetContentLength(body.size());
                     // 使用 HttpServer 的 SendDeferredResponse 需要访问实例，这里简化：直接发送

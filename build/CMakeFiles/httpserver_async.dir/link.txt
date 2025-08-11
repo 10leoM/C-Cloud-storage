@@ -1,1 +1,1 @@
-/usr/bin/c++  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes -g -O0 -ggdb   -fPIC CMakeFiles/httpserver_async.dir/test/httpserver_async.cpp.o -o ../test/bin/httpserver_async  -Wl,-rpath,/home/citizen/cppserver/mymuduo/lib ../lib/libpine_shared.so 
+/usr/bin/c++  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes  -fPIC CMakeFiles/httpserver_async.dir/test/httpserver_async.cpp.o -o ../test/bin/httpserver_async  -Wl,-rpath,/home/citizen/cppserver/mymuduo/lib ../lib/libpine_shared.so 
