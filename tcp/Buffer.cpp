@@ -2,50 +2,9 @@
 #include <iostream>
 #include <cstring>
 #include <assert.h>
-
-// Buffer::Buffer()
-// {
-// }
-
-// Buffer::~Buffer()
-// {
-// }
-
-
-// void Buffer::append(const char* _str, int _size){
-//     for(int i = 0; i < _size; ++i){
-//         if(_str[i] == '\0') break;
-//         buf.push_back(_str[i]);
-//     }
-// }
-
-// ssize_t Buffer::size(){
-//     return buf.size();
-// }
-
-// const char* Buffer::c_str(){
-//     return buf.c_str();
-// }
-
-// void Buffer::clear(){
-//     buf.clear();
-// }
-
-// void Buffer::getline(){
-//     buf.clear();
-//     std::getline(std::cin, buf);
-// }
-
-// void Buffer::toUpper() {
-//     for (size_t i = 0; i < buf.size(); ++i) {
-//         buf[i] = toupper(buf[i]);
-//     }
-// }
-
-// void Buffer::setBuf(const char* _str) {
-//     buf.clear();
-//     append(_str, strlen(_str));
-// }
+#include <algorithm>
+#include <sys/uio.h>
+#include <netinet/in.h>
 
 Buffer::Buffer() : buf_(InitialSize), read_index_(PrePendIndex), write_index_(PrePendIndex) {}
 
@@ -59,43 +18,52 @@ char* Buffer::beginwrite() { return begin() + write_index_; }
 const char* Buffer::beginwrite() const { return begin() + write_index_; }
 
 void Buffer::Append(const char* message) {
-    Append(message, static_cast<int>(strlen(message)));
+    Append(message, static_cast<size_t>(strlen(message)));
 }
-void Buffer::Append(const char* message, int len) {
-    for(int i = 0; i < len; ++i) {
+void Buffer::Append(const char* message, size_t len) {
+    for(size_t i = 0; i < len; ++i) {
         if(message[i] == '\0')
         {
             len = i; // 如果遇到'\0'，则只追加到此处
             break;
         }
     }
-    EnsureWritableBytes(len);
-    std::copy(message, message + len, beginwrite());
-    write_index_ += len;
+    if(len) {
+        EnsureWritableBytes(len);
+        std::copy(message, message + len, beginwrite());
+        write_index_ += len;
+    }
 }
 void Buffer::Append(const std::string& message) {
-    Append(message.data(), static_cast<int>(message.size()));
+    Append(message.data(), static_cast<size_t>(message.size()));
+}
+void Buffer::Append(const void *data, size_t len) {
+    if(!len) return;
+    EnsureWritableBytes(len);
+    std::memcpy(beginwrite(), data, len);
+    write_index_ += len;
 }
 
-int Buffer::GetReadablebytes() const { return write_index_ - read_index_; }
-int Buffer::GetWritablebytes() const { return static_cast<int>(buf_.size()) - write_index_; }
-int Buffer::GetPrependablebytes() const { return read_index_; }
+size_t Buffer::GetReadablebytes() const { return write_index_ - read_index_; }
+size_t Buffer::GetWritablebytes() const { return buf_.size() - write_index_; }
+size_t Buffer::GetPrependablebytes() const { return read_index_; }
 
 char *Buffer::Peek() { return beginread(); }
 const char *Buffer::Peek() const { return beginread(); }
-std::string Buffer::PeekAsString(int len) {
+std::string Buffer::PeekAsString(size_t len) {
+    assert(GetReadablebytes() >= len);
     return std::string(beginread(), beginread() + len);
 }
 std::string Buffer::PeekAllAsString() {
     return std::string(beginread(), beginwrite());
 }
 
-void Buffer::Retrieve(int len) {
-    assert(GetReadablebytes() > len);
-    if (len + read_index_ < write_index_) {
-        read_index_ += len; // 更新读取索引
+void Buffer::Retrieve(size_t len) {
+    assert(GetReadablebytes() >= len);
+    if (len < GetReadablebytes()) {
+        read_index_ += len;
     } else {
-        RetrieveAll(); // 读完全部数据
+        RetrieveAll();
     }
 }
 void Buffer::RetrieveAll() {
@@ -104,44 +72,93 @@ void Buffer::RetrieveAll() {
 }
 void Buffer::RetrieveUtil(const char *end) {
     assert(end >= beginread() && end <= beginwrite());
-    Retrieve(static_cast<int>(end - beginread()));
+    Retrieve(static_cast<size_t>(end - beginread()));
 }
 
-std::string Buffer::RetrieveAsString(int len) {
+std::string Buffer::RetrieveAsString(size_t len) {
     assert(GetReadablebytes() >= len);
-    std::string result = std::move(PeekAsString(len));
+    std::string result = PeekAsString(len);
     Retrieve(len);
     return result;
 }
 std::string Buffer::RetrieveAllAsString() {
-    std::string result = std::move(PeekAllAsString());
+    std::string result = PeekAllAsString();
     RetrieveAll();
     return result;
 }
 std::string Buffer::RetrieveUtilAsString(const char *end) {
     assert(end >= beginread() && end <= beginwrite());
-    std::string result = std::move(PeekAsString(end - beginread()));
-    Retrieve(end - beginread());
+    size_t len = static_cast<size_t>(end - beginread());
+    std::string result = PeekAsString(len);
+    Retrieve(len);
     return result;
 }
 
-void Buffer::EnsureWritableBytes(int len) {
-    if(GetWritablebytes() >= len) 
-        return;
-    if(GetWritablebytes() + GetPrependablebytes() >= PrePendIndex + len) // 可写空间 + 可写空间前的空间 < 所需空间
-    {
-        std::copy(beginread(), beginwrite(), begin() + PrePendIndex);
-        write_index_ = PrePendIndex + GetReadablebytes();
-        read_index_ = PrePendIndex;
-    }
-    else    // 空间不足
-    {
-        buf_.resize(write_index_ + len);
-    }
+void Buffer::EnsureWritableBytes(size_t len) {
+    if (GetWritablebytes() >= len) return;
+    makeSpace(len);
+    assert(GetWritablebytes() >= len);
 }
 
 void Buffer::toUpper() {
     for (size_t i = read_index_; i < write_index_; ++i) {
         buf_[i] = toupper(buf_[i]);
     }
+}
+
+void Buffer::makeSpace(size_t len) {
+    if (GetWritablebytes() + GetPrependablebytes() - PrePendIndex >= len) {
+        size_t readable = GetReadablebytes();
+        std::copy(beginread(), beginwrite(), begin() + PrePendIndex);
+        read_index_ = PrePendIndex;
+        write_index_ = read_index_ + readable;
+    } else {
+        buf_.resize(write_index_ + len);
+    }
+}
+
+const char *Buffer::findCRLF() const { return findCRLF(beginread()); }
+const char *Buffer::findCRLF(const char *start) const {
+    static const char kCRLF[] = "\r\n";
+    const char *res = std::search(start, beginwrite(), kCRLF, kCRLF + 2);
+    return (res == beginwrite()) ? nullptr : res;
+}
+const char *Buffer::findEOL() const {
+    const void *res = memchr(beginread(), '\n', GetReadablebytes());
+    return static_cast<const char *>(res);
+}
+void Buffer::Prepend(const void *data, size_t len) {
+    assert(len <= GetPrependablebytes());
+    read_index_ -= len;
+    std::memcpy(beginread(), data, len);
+}
+void Buffer::PrependInt8(int8_t x) { Prepend(&x, sizeof x); }
+void Buffer::PrependInt16(int16_t x) {
+    int16_t be = htons(static_cast<uint16_t>(x));
+    Prepend(&be, sizeof be);
+}
+void Buffer::PrependInt32(int32_t x) {
+    int32_t be = htonl(static_cast<uint32_t>(x));
+    Prepend(&be, sizeof be);
+}
+ssize_t Buffer::readFd(int fd, int *savedErrno) {
+    char extrabuf[65536];
+    struct iovec vec[2];
+    size_t writable = GetWritablebytes();
+    vec[0].iov_base = beginwrite();
+    vec[0].iov_len = writable;
+    vec[1].iov_base = extrabuf;
+    vec[1].iov_len = sizeof extrabuf;
+    int iovcnt = (writable < sizeof extrabuf) ? 2 : 1;
+    ssize_t n = ::readv(fd, vec, iovcnt);
+    if (n < 0) {
+        if (savedErrno) *savedErrno = errno;
+    } else if (static_cast<size_t>(n) <= writable) {
+        write_index_ += static_cast<size_t>(n);
+    } else {
+        write_index_ += writable;
+        size_t appendLen = static_cast<size_t>(n) - writable;
+        Append(extrabuf, appendLen);
+    }
+    return n;
 }

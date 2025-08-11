@@ -1,8 +1,7 @@
 CMakeFiles/pine_shared.dir/log/LogFile.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/LogFile.cpp \
+ /home/citizen/cppserver/mymuduo/log/LogFile.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/inc/LogFile.h \
- /usr/include/stdio.h \
+ /home/citizen/cppserver/mymuduo/log/inc/LogFile.h /usr/include/stdio.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/features.h /usr/include/features-time64.h \
  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
@@ -124,7 +123,7 @@ CMakeFiles/pine_shared.dir/log/LogFile.cpp.o: \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator.h \
  /usr/include/c++/13/bits/uses_allocator_args.h /usr/include/c++/13/tuple \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/timer/inc/TimeStamp.h \
+ /home/citizen/cppserver/mymuduo/timer/inc/TimeStamp.h \
  /usr/include/time.h /usr/include/x86_64-linux-gnu/bits/time.h \
  /usr/include/x86_64-linux-gnu/bits/timex.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
@@ -132,4 +131,4 @@ CMakeFiles/pine_shared.dir/log/LogFile.cpp.o: \
  /usr/include/c++/13/cstdint \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/util.h
+ /home/citizen/cppserver/mymuduo/base/inc/util.h

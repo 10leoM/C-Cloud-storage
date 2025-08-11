@@ -1,7 +1,7 @@
 CMakeFiles/pine_shared.dir/http/HttpResponse.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/HttpResponse.cpp \
+ /home/citizen/cppserver/mymuduo/http/HttpResponse.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/inc/HttpResponse.h \
+ /home/citizen/cppserver/mymuduo/http/inc/HttpResponse.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

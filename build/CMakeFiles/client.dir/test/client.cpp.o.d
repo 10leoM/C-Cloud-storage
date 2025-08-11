@@ -1,5 +1,5 @@
 CMakeFiles/client.dir/test/client.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/test/client.cpp \
+ /home/citizen/cppserver/mymuduo/test/client.cpp \
  /usr/include/stdc-predef.h /usr/include/c++/13/iostream \
  /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
@@ -177,4 +177,4 @@ CMakeFiles/client.dir/test/client.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
  /usr/include/linux/close_range.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/util.h
+ /home/citizen/cppserver/mymuduo/base/inc/util.h

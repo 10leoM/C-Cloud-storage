@@ -15,7 +15,7 @@ private:
     int listenFd;    // 监听套接字文件描述符
     // Socket *sock;
     std::unique_ptr<Channel> acceptChannel;            // 监听套接字的通道，独属资源
-    std::function<void(int)> newConnectionCallback; // 回调函数，用于处理新连接，实现在Server中
+    std::function<void(int, const InetAddress&, const InetAddress&)> newConnectionCallback; // 传递 fd / local / peer
 
 public:
     DISALLOW_COPY_AND_MOVE(Acceptor);
@@ -27,8 +27,6 @@ public:
     void Listen();                   // 监听套接字
     void setnonblocking(int fd);     // 设置监听套接字为非阻塞模式
     int Accept(InetAddress *addr);   // 接受新连接
-    void Connect(InetAddress *addr); // 连接到指定地址
-
-    void setNewConnectionCallback(std::function<void(int)> cb); // 设置新连接回调函数
+    void setNewConnectionCallback(std::function<void(int, const InetAddress&, const InetAddress&)> cb); // 设置新连接回调函数
     void acceptConnection();                            // 接受新连接并调用回调函数
 };

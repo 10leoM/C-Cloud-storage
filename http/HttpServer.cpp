@@ -63,7 +63,13 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
 {
     if (conn->GetState() == connectionState::Connected)
     {
-        HttpContext *context = conn->GetContext();
+        // 获取或创建 HttpContext
+        auto context = conn->getContext<HttpContext>();
+        if (!context)
+        {
+            context = std::make_shared<HttpContext>();
+            conn->setContext(context);
+        }
         if (!context->ParseRequest(conn->GetReadBuffer()->Peek(), conn->GetReadBuffer()->GetReadablebytes()))
         {
             std::cout<< "ParseRequest failed, message: " << conn->GetReadBuffer()->PeekAllAsString() << std::endl;

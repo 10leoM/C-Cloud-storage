@@ -1,7 +1,7 @@
 CMakeFiles/testlogstream.dir/test/testlogstream.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/test/testlogstream.cpp \
+ /home/citizen/cppserver/mymuduo/test/testlogstream.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/inc/LogStream.h \
+ /home/citizen/cppserver/mymuduo/log/inc/LogStream.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -124,9 +124,8 @@ CMakeFiles/testlogstream.dir/test/testlogstream.cpp.o: \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h /usr/include/c++/13/cassert \
  /usr/include/assert.h /usr/include/c++/13/cstring /usr/include/string.h \
- /usr/include/strings.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/Macro.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/inc/Logger.h \
+ /usr/include/strings.h /home/citizen/cppserver/mymuduo/base/inc/Macro.h \
+ /home/citizen/cppserver/mymuduo/log/inc/Logger.h \
  /usr/include/c++/13/thread /usr/include/c++/13/bits/std_thread.h \
  /usr/include/c++/13/bits/unique_ptr.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/gthr.h \
@@ -149,7 +148,7 @@ CMakeFiles/testlogstream.dir/test/testlogstream.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/c++/13/limits /usr/include/c++/13/ctime \
  /usr/include/c++/13/bits/parse_numbers.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/timer/inc/TimeStamp.h \
+ /home/citizen/cppserver/mymuduo/timer/inc/TimeStamp.h \
  /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/c++/13/iostream \
  /usr/include/c++/13/ostream /usr/include/c++/13/ios \
  /usr/include/c++/13/exception /usr/include/c++/13/bits/exception_ptr.h \

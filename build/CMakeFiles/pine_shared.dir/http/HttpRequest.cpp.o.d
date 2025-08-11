@@ -1,7 +1,7 @@
 CMakeFiles/pine_shared.dir/http/HttpRequest.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/HttpRequest.cpp \
+ /home/citizen/cppserver/mymuduo/http/HttpRequest.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/inc/HttpRequest.h \
+ /home/citizen/cppserver/mymuduo/http/inc/HttpRequest.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

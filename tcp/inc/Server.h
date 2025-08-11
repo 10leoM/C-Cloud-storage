@@ -7,6 +7,7 @@
 #include "CurrentThread.h"
 #include "EventLoopThreadPool.h"
 #include <map>
+#include "InetAddress.h"
 #include <memory>
 
 class EventLoop;           // 前向声明
@@ -28,6 +29,12 @@ private:
     std::function<void(const std::shared_ptr<Connection> &)> messageCallback;      // 业务处理的回调函数
     std::function<void(const std::shared_ptr<Connection> &)> onConnectionCallback; // 新连接的回调函数
 
+    std::function<void(const std::shared_ptr<Connection> &)> closeCallback;                 // 连接关闭业务回调
+    std::function<void(const std::shared_ptr<Connection> &)> errorCallback;                 // 错误回调
+    std::function<void(const std::shared_ptr<Connection> &)> writeCompleteCallback;         // 写完成回调
+    std::function<void(const std::shared_ptr<Connection> &, size_t)> highWaterMarkCallback; // 高水位回调
+    size_t highWaterMark_ = 64 * 1024;                                                      // 默认 64KB，可通过设置高水位回调时覆盖
+
 public:
     DISALLOW_COPY_AND_MOVE(Server);
 
@@ -35,10 +42,15 @@ public:
     ~Server();                                                                   // 析构函数
 
     void start();                                                                                     // 启动服务器，开始监听连接
-    void NewConnection(int fd);                                                                       // 接受新TCP连接，创建Channel并注册到事件循环
+    void NewConnection(int fd, const InetAddress &local, const InetAddress &peer);                    // 接受新TCP连接，创建Channel并注册到事件循环
     void setMessageCallback(std::function<void(const std::shared_ptr<Connection> &)> const &fn);      // 设置业务处理的回调函数
     void setOnConnectionCallback(std::function<void(const std::shared_ptr<Connection> &)> const &fn); // 打印新连接的信息，不创建连接
-    void DeleteConnection(std::shared_ptr<Connection> const &conn);                                   // 断开TCP连接
-    void HandleCloseInMainReactor(std::shared_ptr<Connection> const &conn);                           // 在主事件循环中处理连接关闭
-    void SetThreadPoolSize(int size);                                                                 // 设置线程池大小
+
+    void setCloseCallback(std::function<void(const std::shared_ptr<Connection> &)> const &fn);                              // 设置连接关闭回调函数
+    void setErrorCallback(std::function<void(const std::shared_ptr<Connection> &)> const &fn);                              // 设置错误回调函数
+    void setWriteCompleteCallback(std::function<void(const std::shared_ptr<Connection> &)> const &fn);                      // 设置写完成回调函数
+    void setHighWaterMarkCallback(std::function<void(const std::shared_ptr<Connection> &, size_t)> const &fn, size_t mark); // 设置高水位回调函数
+    void DeleteConnection(std::shared_ptr<Connection> const &conn);                                                         // 断开TCP连接
+    void HandleCloseInMainReactor(std::shared_ptr<Connection> const &conn);                                                 // 在主事件循环中处理连接关闭
+    void SetThreadPoolSize(int size);                                                                                       // 设置线程池大小
 };

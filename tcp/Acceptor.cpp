@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <stdio.h>
 
 Acceptor::Acceptor(EventLoop *_loop, const char *ip, uint16_t port)
@@ -30,7 +31,7 @@ Acceptor::~Acceptor()
     close(listenFd);
 }
 
-void Acceptor::setNewConnectionCallback(std::function<void(int)> cb)
+void Acceptor::setNewConnectionCallback(std::function<void(int, const InetAddress&, const InetAddress&)> cb)
 {
     newConnectionCallback = cb; // 设置新连接回调函数
 }
@@ -38,13 +39,21 @@ void Acceptor::setNewConnectionCallback(std::function<void(int)> cb)
 // 建立新连接的服务函数
 void Acceptor::acceptConnection()
 {
-    InetAddress *clnt_addr = new InetAddress();
-    int clnt_fd = Accept(clnt_addr);
+    InetAddress peer_addr;
+    int clnt_fd = Accept(&peer_addr);
     setnonblocking(clnt_fd);                        // 设置新连接为非阻塞模式
-    printf("New client connected: fd %d, IP: %s, Port: %d\n",
-           clnt_fd, inet_ntoa(clnt_addr->addr.sin_addr), ntohs(clnt_addr->addr.sin_port));
-    newConnectionCallback(clnt_fd);
-    delete clnt_addr;
+    InetAddress local_addr; // 查询本端地址
+    local_addr.addr_len = sizeof(local_addr.addr);
+    if (::getsockname(clnt_fd, (sockaddr*)&local_addr.addr, &local_addr.addr_len) < 0)
+    {
+        perror("getsockname error");
+    }
+    printf("New client connected: fd %d, peer %s:%d -> local %s:%d\n",
+           clnt_fd,
+           inet_ntoa(peer_addr.addr.sin_addr), ntohs(peer_addr.addr.sin_port),
+           inet_ntoa(local_addr.addr.sin_addr), ntohs(local_addr.addr.sin_port));
+    if (newConnectionCallback)
+        newConnectionCallback(clnt_fd, local_addr, peer_addr);
 }
 
 void Acceptor::Create()
@@ -72,7 +81,3 @@ int Acceptor::Accept(InetAddress *addr)
     return fd;
 }
 
-void Acceptor::Connect(InetAddress *addr)
-{
-    errif((connect(this->listenFd, (sockaddr *)&addr->addr, addr->addr_len)) == -1, "socket connect error");
-}

@@ -1,7 +1,7 @@
 CMakeFiles/pine_shared.dir/log/LogStream.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/LogStream.cpp \
+ /home/citizen/cppserver/mymuduo/log/LogStream.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/log/inc/LogStream.h \
+ /home/citizen/cppserver/mymuduo/log/inc/LogStream.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -124,5 +124,4 @@ CMakeFiles/pine_shared.dir/log/LogStream.cpp.o: \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h /usr/include/c++/13/cassert \
  /usr/include/assert.h /usr/include/c++/13/cstring /usr/include/string.h \
- /usr/include/strings.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/Macro.h
+ /usr/include/strings.h /home/citizen/cppserver/mymuduo/base/inc/Macro.h

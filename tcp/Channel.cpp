@@ -35,6 +35,18 @@ void Channel::disableWriting() // 使fd不可写
     ev->updateChannel(this);
 }
 
+void Channel::disableReading() // 使fd不可读
+{
+    events &= ~EPOLLIN;
+    ev->updateChannel(this);
+}
+
+void Channel::disableAll() // 取消所有事件
+{
+    events = 0;
+    ev->updateChannel(this);
+}
+
 bool Channel::isWriting()
 {
     return events & EPOLLOUT;
@@ -90,6 +102,16 @@ void Channel::setWriteCallback(std::function<void()> const &fn)
     this->writeCallback = fn;
 }
 
+void Channel::setCloseCallback(std::function<void()> const &fn)
+{
+    this->closeCallback = fn;
+}
+
+void Channel::setErrorCallback(std::function<void()> const &fn)
+{
+    this->errorCallback = fn;
+}
+
 void Channel::handleEvent() // 目前只处理读事件
 {
     // 处理事件，调用回调函数, one loop per thread，所以不用再add了
@@ -118,14 +140,28 @@ void Channel::Tie(const std::shared_ptr<void> &obj)
 
 void Channel::HandleEventWithGuard()
 {
-    // 这里可以安全地调用回调函数
-    if (revents & EPOLLIN)
+    // 关闭事件 (挂起且无可读)
+    if ((revents & EPOLLHUP) && !(revents & EPOLLIN))
     {
-        readCallback(); // 调用读事件的回调函数
+        if (closeCallback)
+            closeCallback();
     }
-    else if (revents & EPOLLOUT)
+    // 错误事件
+    if (revents & EPOLLERR)
     {
-        writeCallback(); // 调用写事件的回调函数
+        if (errorCallback)
+            errorCallback();
     }
-    // 可以添加对写事件等其他事件的处理逻辑
+    // 可读事件 (含优先/对端关闭半连接)
+    if (revents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP))
+    {
+        if (readCallback)
+            readCallback();
+    }
+    // 可写事件
+    if (revents & EPOLLOUT)
+    {
+        if (writeCallback)
+            writeCallback();
+    }
 }

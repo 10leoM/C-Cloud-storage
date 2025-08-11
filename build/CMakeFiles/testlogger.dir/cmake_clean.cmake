@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/test/bin/testlogger"
-  "/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/test/bin/testlogger.pdb"
+  "../test/bin/testlogger"
+  "../test/bin/testlogger.pdb"
   "CMakeFiles/testlogger.dir/test/testlogger.cpp.o"
   "CMakeFiles/testlogger.dir/test/testlogger.cpp.o.d"
 )

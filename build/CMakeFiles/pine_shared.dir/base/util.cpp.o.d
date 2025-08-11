@@ -1,7 +1,6 @@
 CMakeFiles/pine_shared.dir/base/util.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/util.cpp \
- /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/util.h \
+ /home/citizen/cppserver/mymuduo/base/util.cpp /usr/include/stdc-predef.h \
+ /home/citizen/cppserver/mymuduo/base/inc/util.h \
  /usr/include/c++/13/stdlib.h /usr/include/c++/13/cstdlib \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

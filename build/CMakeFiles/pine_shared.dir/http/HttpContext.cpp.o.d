@@ -1,7 +1,7 @@
 CMakeFiles/pine_shared.dir/http/HttpContext.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/HttpContext.cpp \
+ /home/citizen/cppserver/mymuduo/http/HttpContext.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/inc/HttpContext.h \
+ /home/citizen/cppserver/mymuduo/http/inc/HttpContext.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -153,7 +153,7 @@ CMakeFiles/pine_shared.dir/http/HttpContext.cpp.o: \
  /usr/include/c++/13/backward/auto_ptr.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/http/inc/HttpRequest.h \
+ /home/citizen/cppserver/mymuduo/http/inc/HttpRequest.h \
  /usr/include/c++/13/map /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/bits/node_handle.h \
  /usr/include/c++/13/bits/stl_map.h \

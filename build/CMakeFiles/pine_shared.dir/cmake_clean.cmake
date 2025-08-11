@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/lib/libpine_shared.pdb"
-  "/home/citizen/cppserver/30dayMakeCppServer/mycode/day29/lib/libpine_shared.so"
+  "../lib/libpine_shared.pdb"
+  "../lib/libpine_shared.so"
   "CMakeFiles/pine_shared.dir/base/CurrentThread.cpp.o"
   "CMakeFiles/pine_shared.dir/base/CurrentThread.cpp.o.d"
   "CMakeFiles/pine_shared.dir/base/util.cpp.o"

@@ -1,7 +1,7 @@
 CMakeFiles/pine_shared.dir/base/CurrentThread.cpp.o: \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/CurrentThread.cpp \
+ /home/citizen/cppserver/mymuduo/base/CurrentThread.cpp \
  /usr/include/stdc-predef.h \
- /home/citizen/cppserver/30dayMakeCppServer/mycode/day29/base/inc/CurrentThread.h \
+ /home/citizen/cppserver/mymuduo/base/inc/CurrentThread.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/features.h /usr/include/features-time64.h \

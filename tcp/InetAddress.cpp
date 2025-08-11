@@ -17,6 +17,21 @@ InetAddress::InetAddress(const char *ip, uint16_t port)
     addr_len = sizeof(addr);
 }
 
+InetAddress::InetAddress(const InetAddress &other)
+{
+    addr = other.addr;
+    addr_len = other.addr_len;
+}
+
+InetAddress &InetAddress::operator=(const InetAddress &other)
+{
+    if (this != &other) {
+        addr = other.addr;
+        addr_len = other.addr_len;
+    }
+    return *this;
+}
+
 InetAddress::~InetAddress()
 {
 
