@@ -73,15 +73,51 @@ std::string HttpRequest::GetVersionString() const
     return ver;
 }
 
-void HttpRequest::SetUrl(const std::string &url) 
+void HttpRequest::SetUrl(const std::string &url)
 {
-    url_ = url; // 直接赋值
+    // 拆分 ? 之前为 path, 之后为 query
+    auto pos = url.find('?');
+    if (pos == std::string::npos) {
+        url_ = url;
+        raw_query_.clear();
+    } else {
+        url_ = url.substr(0, pos);
+        raw_query_ = url.substr(pos + 1);
+    }
+    // 清空旧查询参数并重新解析
+    query_params_multi_.clear();
+    if (!raw_query_.empty()) {
+        ParseQueryString();
+    }
 }
 
 const std::string &HttpRequest::GetUrl() const 
 {
     return url_;
 }
+
+const std::string &HttpRequest::GetRawQuery() const { return raw_query_; }
+
+std::string HttpRequest::GetQueryValue(const std::string &key) const {
+    auto it = query_params_multi_.find(key);
+    if (it != query_params_multi_.end() && !it->second.empty()) return it->second.front();
+    return {};
+}
+const std::vector<std::string> &HttpRequest::GetQueryValues(const std::string &key) const {
+    static const std::vector<std::string> kEmpty;
+    auto it = query_params_multi_.find(key);
+    if (it != query_params_multi_.end()) return it->second;
+    return kEmpty;
+}
+const std::map<std::string, std::vector<std::string>> &HttpRequest::GetQueryParamMap() const { return query_params_multi_; }
+
+void HttpRequest::SetPathParam(const std::string& key, const std::string& value) { path_params_[key] = value; }
+std::string HttpRequest::GetPathParam(const std::string& key) const {
+    auto it = path_params_.find(key);
+    if (it != path_params_.end()) return it->second;
+    return {};
+}
+const std::map<std::string,std::string>& HttpRequest::GetPathParams() const { return path_params_; }
 
 void HttpRequest::SetRequestParams(const std::string &key, const std::string &value) 
 {
@@ -137,6 +173,85 @@ void HttpRequest::SetBody(const std::string &str)
 const std::string &HttpRequest::GetBody() const
 {
     return body_;
+}
+
+// URL Decode 实现（处理 %XX 与 + -> space）
+std::string HttpRequest::UrlDecode(const std::string &src)
+{
+    std::string out;
+    out.reserve(src.size());
+    for (size_t i = 0; i < src.size(); ++i) {
+        unsigned char c = static_cast<unsigned char>(src[i]);
+        if (c == '+') { out.push_back(' '); }
+        else if (c == '%' && i + 2 < src.size()) {
+            auto hex = [](unsigned char h)->int {
+                if (h >= '0' && h <= '9') return h - '0';
+                if (h >= 'a' && h <= 'f') return h - 'a' + 10;
+                if (h >= 'A' && h <= 'F') return h - 'A' + 10;
+                return -1;
+            };
+            int h1 = hex(static_cast<unsigned char>(src[i+1]));
+            int h2 = hex(static_cast<unsigned char>(src[i+2]));
+            if (h1 >= 0 && h2 >= 0) {
+                out.push_back(static_cast<char>((h1 << 4) | h2));
+                i += 2;
+            } else {
+                out.push_back(c); // 非法编码，按原样输出
+            }
+        } else {
+            out.push_back(static_cast<char>(c));
+        }
+    }
+    return out;
+}
+
+void HttpRequest::AddQueryParam(const std::string &key, const std::string &value)
+{
+    query_params_multi_[key].push_back(value);
+}
+
+void HttpRequest::ParseQueryString()
+{
+    size_t start = 0;
+    while (start < raw_query_.size()) {
+        size_t amp = raw_query_.find('&', start);
+        if (amp == std::string::npos) amp = raw_query_.size();
+        std::string pair = raw_query_.substr(start, amp - start);
+        if (!pair.empty()) {
+            size_t eq = pair.find('=');
+            std::string key, value;
+            if (eq == std::string::npos) {
+                key = UrlDecode(pair);
+            } else {
+                key = UrlDecode(pair.substr(0, eq));
+                value = UrlDecode(pair.substr(eq + 1));
+            }
+            if (!key.empty()) AddQueryParam(key, value);
+        }
+        start = amp + 1;
+    }
+}
+
+bool HttpRequest::ExtractPathParams(const std::string &pattern)
+{
+    // 简单分段匹配: /a/:id/b ；:name 为变量
+    // 不支持通配符 * / 正则。
+    auto split = [](const std::string &s){
+        std::vector<std::string> v; size_t i=0; while(i<s.size()){ while(i<s.size() && s[i]=='/') ++i; if(i>=s.size()) break; size_t j=i; while(j<s.size() && s[j]!='/') ++j; v.emplace_back(s.substr(i,j-i)); i=j; } return v; };
+    auto pathSegs = split(url_);
+    auto patSegs = split(pattern);
+    if (pathSegs.size() != patSegs.size()) return false;
+    for (size_t i=0;i<patSegs.size();++i){
+        const std::string &p = patSegs[i];
+        const std::string &seg = pathSegs[i];
+        if (!p.empty() && p[0]==':') {
+            std::string key = p.substr(1);
+            path_params_[key] = seg; // 覆盖旧值
+        } else if (p != seg) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // 其他成员函数的实现
