@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(day25)
 set(CMAKE_CXX_STANDARD 17)
+# (auto-generated update to include new tests)
 
 # 设置头文件路径
 set(PINE_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/timer/inc ${PROJECT_SOURCE_DIR}/base/inc ${PROJECT_SOURCE_DIR}/log/inc)

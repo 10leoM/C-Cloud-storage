@@ -11,13 +11,28 @@
 #include <functional>
 #include <iostream>
 #include <fstream>
+#include "StaticFileHandler.h"
 
 bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &/*conn*/, const HttpRequest &request, HttpResponse *resp)
 {
-    resp->SetStatusCode(HttpStatusCode::NotFound); // 设置状态码为404 Not Found
-    resp->SetStatusMessage("Not Found");           // 设置状态消息为Not Found
-    resp->SetCloseConnection(true);                // 设置关闭连接为true
-    return true; // 同步立即返回
+    // 简易静态文件: /static/... 或根路径
+    if (request.GetMethod() == HttpMethod::kGet || request.GetMethod() == HttpMethod::kHead) {
+        if (StaticFileHandler::Handle("./files", request, resp)) {
+            if (request.GetMethod() == HttpMethod::kHead && resp->GetBodyType() == HTML_TYPE) {
+                // HEAD 对文件：不发送 body，已在外层处理
+                resp->SetBody("");
+            }
+            return true;
+        }
+    }
+    resp->SetStatusCode(HttpStatusCode::NotFound);
+    resp->SetStatusMessage("Not Found");
+    resp->SetCloseConnection(true);
+    resp->SetBodyType(HTML_TYPE);
+    resp->SetBody("404 Not Found\n");
+    resp->SetContentLength(13);
+    resp->SetContentType("text/plain; charset=utf-8");
+    return true;
 }
 
 HttpServer::HttpServer(EventLoop *loop, const char *ip, const int port, bool auto_close_conn)
@@ -145,15 +160,17 @@ void HttpServer::onRequest(const ConnectionPtr &conn, const HttpRequest &request
     // 同步回包
     if(response.GetBodyType() == HttpBodyType::HTML_TYPE) {
         conn->Send(response.GetMessage());
-    } else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) 
-    {
+    } else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) {
         conn->Send(response.GetBeforeBody());
-        conn->SendFile(response.GetFileFd(), response.GetContentLength());
+        if (response.HasRange()) {
+            off_t start = static_cast<off_t>(response.GetRangeStart());
+            size_t len = static_cast<size_t>(response.GetRangeEnd() - response.GetRangeStart() + 1);
+            conn->SendFileRange(response.GetFileFd(), start, len);
+        } else {
+            conn->SendFile(response.GetFileFd(), response.GetContentLength());
+        }
         int ret = close(response.GetFileFd());
-        if (ret < 0) 
-            LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
-        else 
-            LOG_INFO << "HttpServer::onRequest : close filefd success, filefd: " << response.GetFileFd();
+        if (ret < 0) LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
     }
     if (response.IsCloseConnection()) conn->HandleClose();
 }
@@ -163,19 +180,21 @@ void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
     if (!conn || conn->GetState() != connectionState::Connected) return;
     auto context = conn->getContext<HttpContext>();
     if (!context || !context->HasDeferredResponse()) return;
-    
+
     HttpResponse *resp = context->GetDeferredResponse();
-    if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) 
-    {
+    if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) {
         conn->Send(resp->GetMessage());
-    } 
-    else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) 
-    {
+    } else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) {
         conn->Send(resp->GetBeforeBody());
-        conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
+        if (resp->HasRange()) {
+            off_t start = static_cast<off_t>(resp->GetRangeStart());
+            size_t len = static_cast<size_t>(resp->GetRangeEnd() - resp->GetRangeStart() + 1);
+            conn->SendFileRange(resp->GetFileFd(), start, len);
+        } else {
+            conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
+        }
         int ret = close(resp->GetFileFd());
-        if (ret < 0) 
-            LOG_ERROR << "HttpServer::SendDeferredResponse : close filefd failed errno=" << errno;
+        if (ret < 0) LOG_ERROR << "HttpServer::SendDeferredResponse : close filefd failed errno=" << errno;
     }
     bool closeConn = resp->IsCloseConnection();
     context->ClearDeferredResponse();

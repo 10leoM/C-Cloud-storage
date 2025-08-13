@@ -165,7 +165,34 @@ void Connection::SendFile(int filefd, int size) // 发送文件
             printf("other error, size: %zu\n", data_size);
             break;
         }
-        send_size += bytes_write; // 更新已发送数据大小
+    }
+}
+
+void Connection::SendFileRange(int filefd, off_t start, size_t len)
+{
+    // 使用 sendfile 支持 offset 的循环（Linux sendfile 第三个参数为 off_t* 会更新位置）
+    off_t offset = start;
+    size_t sent = 0;
+    while (sent < len) {
+        size_t toSend = len - sent;
+        ssize_t n = ::sendfile(fd, filefd, &offset, toSend);
+        if (n > 0) {
+            sent += static_cast<size_t>(n);
+            continue;
+        }
+        if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // 将剩余部分记录到发送缓冲区（简化：读取拷贝方式）
+            size_t remain = len - sent;
+            std::string tmp;
+            tmp.resize(remain);
+            ssize_t rn = ::pread(filefd, (void *)tmp.data(), remain, offset);
+            if (rn > 0) {
+                Send(tmp.data(), static_cast<size_t>(rn));
+            }
+            break;
+        }
+        if (n == -1 && errno == EINTR) continue;
+        break; // 其他错误终止
     }
 }
 

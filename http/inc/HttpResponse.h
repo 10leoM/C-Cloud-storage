@@ -10,11 +10,13 @@ enum HttpStatusCode
     Unknown = 0,              // 未知状态码
     Continue = 100,           // 继续
     OK = 200,                 // 成功
+    PartialContent = 206,     // 部分内容
     k301K = 301,              // 永久重定向
     k302K = 302,              // 临时重定向
     BadRequest = 400,         // 错误请求
     Forbidden = 403,          // 禁止访问
     NotFound = 404,           // 未找到
+    RangeNotSatisfiable = 416, // Range 无法满足
     InternalServerError = 500 // 服务器内部错误
 };
 
@@ -37,6 +39,7 @@ private:
     int filefd_;                                 // 文件描述符，用于文件传输
     HttpBodyType body_type_;                     // 响应体类型
     bool async_pending_ = false;                 // 是否处于异步延迟发送
+
     // Range 支持
     bool has_range_ = false;
     long long range_start_ = 0;
@@ -76,4 +79,7 @@ public:
     // 设置部分内容；end 为包含区间，若 end<start 视为无效；total 可传 -1 表示未知（不输出 total）
     bool SetContentRange(long long start, long long end, long long total);
     bool HasRange() const { return has_range_; }
+    long long GetRangeStart() const { return range_start_; }
+    long long GetRangeEnd() const { return range_end_; }
+    static HttpResponse MakeSimple(bool close, HttpStatusCode code, const std::string& msg, const std::string& body="");
 };

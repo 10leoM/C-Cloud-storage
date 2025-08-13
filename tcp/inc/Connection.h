@@ -27,13 +27,13 @@ enum connectionState
 class Connection : public std::enable_shared_from_this<Connection>
 {
 private:
-    EventLoop *loop;       // 事件循环,借用资源
-    int fd;                // 文件描述符
-    int conn_id;           // 连接ID
-    connectionState state; // 连接状态
+    EventLoop *loop;            // 事件循环,借用资源
+    int fd;                     // 文件描述符
+    int conn_id;                // 连接ID
+    connectionState state;      // 连接状态
     TimeStamp last_active_time; // 最近一次活跃
-    InetAddress localAddr_; // 本端地址
-    InetAddress peerAddr_;  // 对端地址
+    InetAddress localAddr_;     // 本端地址
+    InetAddress peerAddr_;      // 对端地址
 
     std::unique_ptr<Channel> channel;
     std::unique_ptr<Buffer> readBuffer;                                                     // 读取缓冲区
@@ -56,7 +56,7 @@ private:
 public:
     DISALLOW_COPY_AND_MOVE(Connection);
 
-    Connection(EventLoop *_loop, int fd, int conn_id, const InetAddress& local, const InetAddress& peer); // 构造函数
+    Connection(EventLoop *_loop, int fd, int conn_id, const InetAddress &local, const InetAddress &peer); // 构造函数
     ~Connection();
 
     void connectionDestroyed();                                                                                             // 连接销毁时调用
@@ -76,23 +76,24 @@ public:
 
     void Read();
     void Write();
-    void Send(const std::string &msg);      // 发送消息
-    void Send(const char *msg, size_t len); // 发送C风格字符串
-    void Send(const char *msg);             // 发送C风格字符串
-    void SendFile(int filefd, int size);    // 发送文件
-    void shutdown();                        // 半关闭(写端)
-    void forceClose();                      // 强制关闭
+    void Send(const std::string &msg);                       // 发送消息
+    void Send(const char *msg, size_t len);                  // 发送C风格字符串
+    void Send(const char *msg);                              // 发送C风格字符串
+    void SendFile(int filefd, int size);                     // 发送文件
+    void SendFileRange(int filefd, off_t start, size_t len); // 发送文件区间
+    void shutdown();                                         // 半关闭(写端)
+    void forceClose();                                       // 强制关闭
 
     connectionState GetState();          // 获取连接状态
     void SetSendBuffer(const char *str); // 设置发送缓冲区内容
     int GetFd();                         // 获取Socket对象
-    const InetAddress& GetlocalAddr() const { return localAddr_; }
-    const InetAddress& GetpeerAddr() const { return peerAddr_; }
+    const InetAddress &GetlocalAddr() const { return localAddr_; }
+    const InetAddress &GetpeerAddr() const { return peerAddr_; }
     std::string GetlocalIpPort() const;
     std::string GetpeerIpPort() const;
-    Buffer *GetReadBuffer();             // 获取读取缓冲区
-    Buffer *GetSendBuffer();             // 获取发送缓冲区
-    EventLoop *GetLoop();                // 获取事件循环
+    Buffer *GetReadBuffer(); // 获取读取缓冲区
+    Buffer *GetSendBuffer(); // 获取发送缓冲区
+    EventLoop *GetLoop();    // 获取事件循环
 
     template <typename T>
     std::shared_ptr<T> getContext() const { return std::static_pointer_cast<T>(context); }

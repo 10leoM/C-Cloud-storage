@@ -109,7 +109,23 @@ void HttpResponse::AppendToBuffer(Buffer* out) const
     if (!out) return;
     std::string head;
     head.reserve(256 + headers_.size()*32);
-    head += "HTTP/1.1 " + std::to_string(status_code_) + " " + status_message_ + "\r\n";
+    // 如果是范围请求且仍是200，在生成行前改成206
+    if (has_range_ && status_code_ == HttpStatusCode::OK) const_cast<HttpResponse*>(this)->status_code_ = HttpStatusCode::PartialContent;
+    // 自动补状态消息
+    std::string statusMsg = status_message_;
+    if (statusMsg.empty()) {
+        switch (status_code_) {
+            case HttpStatusCode::OK: statusMsg = "OK"; break;
+            case HttpStatusCode::PartialContent: statusMsg = "Partial Content"; break;
+            case HttpStatusCode::BadRequest: statusMsg = "Bad Request"; break;
+            case HttpStatusCode::NotFound: statusMsg = "Not Found"; break;
+            case HttpStatusCode::Forbidden: statusMsg = "Forbidden"; break;
+            case HttpStatusCode::RangeNotSatisfiable: statusMsg = "Range Not Satisfiable"; break;
+            case HttpStatusCode::InternalServerError: statusMsg = "Internal Server Error"; break;
+            default: statusMsg = ""; break;
+        }
+    }
+    head += "HTTP/1.1 " + std::to_string(status_code_) + " " + statusMsg + "\r\n";
     if (close_connection_) head += "Connection: close\r\n"; else head += "Connection: Keep-Alive\r\n";
     // 若未显式 Content-Length 且非关闭连接，则计算
     if (!has_range_) {
@@ -122,7 +138,8 @@ void HttpResponse::AppendToBuffer(Buffer* out) const
         if (total_length_ >= 0) cr += "/" + std::to_string(total_length_); else cr += "/*";
         head += "Content-Range: " + cr + "\r\n";
         head += "Content-Length: " + std::to_string(range_end_ - range_start_ + 1) + "\r\n";
-        if (status_code_ == HttpStatusCode::OK) ; // 调用方应设为206，保守不改写
+        // 自动修改状态码为206
+        if (status_code_ == HttpStatusCode::OK) const_cast<HttpResponse*>(this)->status_code_ = HttpStatusCode::PartialContent;
     }
     for (auto &kv : headers_) {
         if (kv.first == "Content-Length" || kv.first == "Content-Range" || kv.first == "Connection") continue; // 已输出或覆盖
@@ -137,5 +154,16 @@ bool HttpResponse::SetContentRange(long long start, long long end, long long tot
 {
     if (start < 0 || end < start) return false;
     range_start_ = start; range_end_ = end; total_length_ = total; has_range_ = true; return true;
+}
+
+HttpResponse HttpResponse::MakeSimple(bool close, HttpStatusCode code, const std::string& msg, const std::string& body) {
+    HttpResponse r(close);
+    r.SetStatusCode(code);
+    r.SetStatusMessage(msg);
+    r.SetBody(body);
+    r.SetBodyType(HTML_TYPE);
+    r.SetContentLength(static_cast<int>(body.size()));
+    r.SetContentType("text/plain; charset=utf-8");
+    return r;
 }
 
