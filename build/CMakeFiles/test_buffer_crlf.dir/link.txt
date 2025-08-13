@@ -1,1 +1,0 @@
-/usr/bin/c++  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes  -fPIC CMakeFiles/test_buffer_crlf.dir/test/test_buffer_crlf.cpp.o -o ../test/bin/test_buffer_crlf  -Wl,-rpath,/home/citizen/cppserver/mymuduo/lib ../lib/libpine_shared.so 

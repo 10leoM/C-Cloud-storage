@@ -259,4 +259,34 @@ bool HttpRequest::ExtractPathParams(const std::string &pattern)
     return true;
 }
 
+// Range: bytes=start-end 或 bytes=-suffix
+bool HttpRequest::ParseRangeHeader()
+{
+    has_range_ = false; range_start_ = 0; range_end_ = -1; range_suffix_ = false;
+    auto it = headers_.find("Range");
+    if (it == headers_.end()) return false;
+    const std::string& val = it->second;
+    if (val.size() < 6 || val.substr(0,6) != "bytes=") return false;
+    std::string spec = val.substr(6);
+    auto dash = spec.find('-');
+    if (dash == std::string::npos) return false;
+    std::string start = spec.substr(0, dash);
+    std::string end = spec.substr(dash+1);
+    if (start.empty() && !end.empty()) {
+        // bytes=-N
+        range_suffix_ = true;
+        try { range_end_ = std::stoll(end); } catch (...) { return false; }
+        has_range_ = true;
+        return true;
+    }
+    try { range_start_ = std::stoll(start); } catch (...) { return false; }
+    if (!end.empty()) {
+        try { range_end_ = std::stoll(end); } catch (...) { return false; }
+    } else {
+        range_end_ = -1;
+    }
+    has_range_ = true;
+    return true;
+}
+
 // 其他成员函数的实现

@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <map>
+class Buffer; // 前向声明
 
 enum HttpStatusCode
 {
@@ -35,6 +36,12 @@ private:
     int content_length_;                         // 内容长度
     int filefd_;                                 // 文件描述符，用于文件传输
     HttpBodyType body_type_;                     // 响应体类型
+    bool async_pending_ = false;                 // 是否处于异步延迟发送
+    // Range 支持
+    bool has_range_ = false;
+    long long range_start_ = 0;
+    long long range_end_ = -1; // inclusive
+    long long total_length_ = -1; // 总长度用于 Content-Range 最后一个数字
 
 public:
     HttpResponse(bool close_connection);
@@ -57,4 +64,16 @@ public:
 
     std::string GetMessage();    // 生成完整的HTTP响应消息
     std::string GetBeforeBody(); // 先发送beforebody;
+    // 统一写入到外部 Buffer，减少字符串拼接拷贝
+    void AppendToBuffer(Buffer* out) const;
+
+    // Async 标记
+    void MarkAsyncPending(bool v=true) { async_pending_ = v; }
+    bool IsAsyncPending() const { return async_pending_; }
+
+    // Range 与 Accept-Ranges
+    void EnableAcceptRanges() { AddHeader("Accept-Ranges", "bytes"); }
+    // 设置部分内容；end 为包含区间，若 end<start 视为无效；total 可传 -1 表示未知（不输出 total）
+    bool SetContentRange(long long start, long long end, long long total);
+    bool HasRange() const { return has_range_; }
 };

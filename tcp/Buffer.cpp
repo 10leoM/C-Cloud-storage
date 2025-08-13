@@ -21,13 +21,6 @@ void Buffer::Append(const char* message) {
     Append(message, static_cast<size_t>(strlen(message)));
 }
 void Buffer::Append(const char* message, size_t len) {
-    for(size_t i = 0; i < len; ++i) {
-        if(message[i] == '\0')
-        {
-            len = i; // 如果遇到'\0'，则只追加到此处
-            break;
-        }
-    }
     if(len) {
         EnsureWritableBytes(len);
         std::copy(message, message + len, beginwrite());

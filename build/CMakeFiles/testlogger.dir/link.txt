@@ -1,1 +1,0 @@
-/usr/bin/c++  -fPIC -Wall -Wextra -std=c++17 -pthread -Wno-unused-parameter -Wno-attributes  -fPIC CMakeFiles/testlogger.dir/test/testlogger.cpp.o -o ../test/bin/testlogger  -Wl,-rpath,/home/citizen/cppserver/mymuduo/lib ../lib/libpine_shared.so 

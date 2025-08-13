@@ -34,6 +34,7 @@ void HttpContext::ResetContextStatus()
     current_chunk_size_ = 0;
     chunk_size_buf_.clear();
 }
+
 bool HttpContext::ParseRequest(const char *begin, int size)
 {
     // 为向后兼容，仍旧一次性解析（首阶段：请求行与头部）。
@@ -161,21 +162,22 @@ bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consume
     consumedBytes = 0;
     // 若头还未完成，逐行处理
     if (!headers_complete_) {
-        // 查找 CRLF 行
         while (consumedBytes < len && !headers_complete_) {
             const char* lineStart = data + consumedBytes;
             const char* cr = static_cast<const char*>(memchr(lineStart, '\r', len - consumedBytes));
             if (!cr || (cr + 1 >= data + len)) {
                 // 行尚未完整
-                return true; // 等待更多数据
+                return true;
             }
             if (*(cr + 1) != '\n') { state_ = HttpRequestParseState::INVALID; return false; }
-            size_t lineLen = static_cast<size_t>(cr - lineStart); // 不含 CR
+            size_t lineLen = static_cast<size_t>(cr - lineStart);
+            if (lineLen > limits_.max_header_line_len) { state_ = HttpRequestParseState::INVALID_HEADER; return false; }
+            header_bytes_ += lineLen + 2;
+            if (header_bytes_ > limits_.max_header_bytes) { state_ = HttpRequestParseState::INVALID_HEADER; return false; }
             std::string line(lineStart, lineLen);
-            consumedBytes += lineLen + 2; // 跳过 CRLF
+            consumedBytes += lineLen + 2;
             if (state_ == HttpRequestParseState::START) state_ = HttpRequestParseState::METHOD;
             if (line.empty()) {
-                // 空行 -> 头结束
                 headers_complete_ = true;
                 auto &hs = request_->GetHeaders();
                 if (hs.count("Transfer-Encoding") && hs.at("Transfer-Encoding") == "chunked") { chunked_ = true; }
@@ -184,16 +186,13 @@ bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consume
                 break;
             }
             if (request_->GetMethod() == HttpMethod::kInvalid) {
-                // 第一行: 请求行  METHOD SP URL SP HTTP/1.x
                 size_t p1 = line.find(' '); if (p1 == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
                 size_t p2 = line.find(' ', p1 + 1); if (p2 == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
                 request_->SetMethod(line.substr(0, p1));
                 request_->SetUrl(line.substr(p1 + 1, p2 - p1 - 1));
                 std::string proto = line.substr(p2 + 1);
-                // proto 形如 HTTP/1.1
                 if (proto.rfind("HTTP/", 0) == 0) request_->SetVersion(proto.substr(5));
             } else {
-                // 头行 key: value
                 size_t colon = line.find(':');
                 if (colon == std::string::npos) { state_ = HttpRequestParseState::INVALID; return false; }
                 size_t vstart = colon + 1;
@@ -207,6 +206,7 @@ bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consume
     if (headers_complete_ && !body_complete_) {
         size_t bodyConsumed = 0;
         size_t remain = len - consumedBytes;
+        if (!chunked_ && content_length_ > limits_.max_body_bytes) { state_ = HttpRequestParseState::INVALID; return false; }
         if (chunked_) {
             if (!ParseChunkedBlock(data + consumedBytes, remain, bodyConsumed)) return false;
         } else if (content_length_ > 0) {
@@ -234,7 +234,8 @@ bool HttpContext::ParseChunkedBlock(const char* data, size_t len, size_t &consum
 {
     consumed = 0;
     while (consumed < len && !body_complete_) {
-        switch (chunk_state_) {
+        switch (chunk_state_) 
+        {
         case ChunkState::SIZE:
             if (data[consumed] == '\r') { chunk_state_ = ChunkState::SIZE_CR; }
             else { chunk_size_buf_.push_back(data[consumed]); }

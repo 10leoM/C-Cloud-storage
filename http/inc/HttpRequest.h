@@ -25,6 +25,11 @@ enum HttpVersion
 class HttpRequest
 {
 private:
+    // Range 解析
+    bool has_range_ = false;
+    long long range_start_ = 0;
+    long long range_end_ = -1;
+    bool range_suffix_ = false; // bytes=-N
     HttpMethod method_;   // 请求方法
     HttpVersion version_; // 版本
 
@@ -38,6 +43,12 @@ private:
     std::string body_;                                                   // 请求体
 
 public:
+    // Range 头解析
+    bool HasRange() const { return has_range_; }
+    long long GetRangeStart() const { return range_start_; }
+    long long GetRangeEnd() const { return range_end_; }
+    bool IsRangeSuffix() const { return range_suffix_; }
+    bool ParseRangeHeader();
     HttpRequest();
     ~HttpRequest();
 

@@ -151,13 +151,9 @@ void HttpServer::onRequest(const ConnectionPtr &conn, const HttpRequest &request
         conn->SendFile(response.GetFileFd(), response.GetContentLength());
         int ret = close(response.GetFileFd());
         if (ret < 0) 
-        {
             LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
-        } 
         else 
-        {
             LOG_INFO << "HttpServer::onRequest : close filefd success, filefd: " << response.GetFileFd();
-        }
     }
     if (response.IsCloseConnection()) conn->HandleClose();
 }
@@ -167,6 +163,7 @@ void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
     if (!conn || conn->GetState() != connectionState::Connected) return;
     auto context = conn->getContext<HttpContext>();
     if (!context || !context->HasDeferredResponse()) return;
+    
     HttpResponse *resp = context->GetDeferredResponse();
     if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) 
     {
@@ -178,9 +175,7 @@ void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
         conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
         int ret = close(resp->GetFileFd());
         if (ret < 0) 
-        {
             LOG_ERROR << "HttpServer::SendDeferredResponse : close filefd failed errno=" << errno;
-        }
     }
     bool closeConn = resp->IsCloseConnection();
     context->ClearDeferredResponse();
