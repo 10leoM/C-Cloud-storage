@@ -260,7 +260,7 @@ bool HttpRequest::ExtractPathParams(const std::string &pattern)
 }
 
 // Range: bytes=start-end 或 bytes=-suffix
-bool HttpRequest::ParseRangeHeader()
+bool HttpRequest::()
 {
     has_range_ = false; range_start_ = 0; range_end_ = -1; range_suffix_ = false;
     auto it = headers_.find("Range");

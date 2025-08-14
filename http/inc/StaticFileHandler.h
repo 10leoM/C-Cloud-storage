@@ -8,10 +8,12 @@
 #include "HttpResponse.h"
 
 // 简易静态文件与 Range 处理工具
-class StaticFileHandler {
+class StaticFileHandler 
+{
 public:
     // 根目录 root (不包含最后的 /), request path (以 / 开头)
-    static bool Handle(const std::string& root, const HttpRequest& req, HttpResponse* resp) {
+    static bool Handle(const std::string& root, const HttpRequest& req, HttpResponse* resp) 
+    {
         std::string path = req.GetUrl(); // 已不含 query
         if (path == "/") path = "/index.html";
         std::string full = root + path; // 简单拼接，后续可加入 .. 校验

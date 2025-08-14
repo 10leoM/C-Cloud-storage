@@ -8,13 +8,28 @@
 #include "CurrentThread.h"
 #include "Logger.h"
 #include <arpa/inet.h>
-#include <functional>
 #include <iostream>
 #include <fstream>
 #include "StaticFileHandler.h"
 
-bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &/*conn*/, const HttpRequest &request, HttpResponse *resp)
+bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &conn, const HttpRequest &request, HttpResponse *resp)
 {
+    // 0) 路由优先：按 method+path 匹配，并按 handlerName 分派；将匹配到的路径参数注入到请求副本
+    if (router_) {
+        RouteMatch m = router_->findRoute(request.GetUrl(), request.GetMethodString());
+        if (!m.handler.empty()) {
+            auto it = route_handlers_.find(m.handler);
+            if (it != route_handlers_.end()) {
+                if (!m.params.empty()) {
+                    HttpRequest reqCopy = request; // 复制以便注入路径参数
+                    for (const auto &kv : m.params) reqCopy.SetPathParam(kv.first, kv.second);
+                    return it->second(conn, reqCopy, resp);
+                }
+                return it->second(conn, request, resp);
+            }
+        }
+    }
+
     // 简易静态文件: /static/... 或根路径
     if (request.GetMethod() == HttpMethod::kGet || request.GetMethod() == HttpMethod::kHead) {
         if (StaticFileHandler::Handle("./files", request, resp)) {
@@ -42,37 +57,19 @@ HttpServer::HttpServer(EventLoop *loop, const char *ip, const int port, bool aut
     server_->setOnConnectionCallback(std::bind(&HttpServer::onConnection, this, std::placeholders::_1));
     server_->setMessageCallback(std::bind(&HttpServer::onMessage, this, std::placeholders::_1));
     SetHttpCallback(std::bind(&HttpServer::HttpDefaultCallBack, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    router_ = std::make_unique<RouteTrie>();
 }
 
 HttpServer::~HttpServer() {}
 
-void HttpServer::SetHttpCallback(const HttpResponseCallback &cb)
-{
-    responseCallback_ = std::move(cb);
-}
+void HttpServer::SetHttpCallback(const HttpResponseCallback &cb) { responseCallback_ = std::move(cb); }
 
-void HttpServer::start()
-{
-    server_->start(); // 启动服务器
-}
+void HttpServer::start() { server_->start(); }
 
 void HttpServer::onConnection(const ConnectionPtr &conn)
 {
-    // int clnt_fd = conn->GetFd();
-    // struct sockaddr_in peeraddr;
-    // socklen_t peer_addrlength = sizeof(peeraddr);
-    // getpeername(clnt_fd, (struct sockaddr *)&peeraddr, &peer_addrlength);
-
-    // std::cout << CurrentThread::tid()
-    //           << " HttpServer::onConnection : new connection "
-    //           << "[fd#" << clnt_fd << "]"
-    //           << " from " << inet_ntoa(peeraddr.sin_addr) << ":" << ntohs(peeraddr.sin_port)
-    //           << std::endl;
     if (auto_close_conn_)
-    {
-        loop_->RunAfter(AUTOCLOSETIMEOUT,
-                        std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 使用弱引用避免循环引用
-    }
+        loop_->RunAfter(AUTOCLOSETIMEOUT,std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 使用弱引用避免循环引用
 }
 
 void HttpServer::onMessage(const ConnectionPtr &conn)
@@ -96,7 +93,8 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
                 }
                 if (consumed) conn->GetReadBuffer()->Retrieve(consumed);
             }
-            if (context->GetCompleteRequest()) {
+            if (context->GetCompleteRequest()) 
+            {
                 onRequest(conn, *context->GetRequest());
                 // 如果连接已被业务标记关闭则不再解析后续
                 if (conn->GetState() != connectionState::Connected) return;
@@ -201,10 +199,7 @@ void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
     if (closeConn) conn->HandleClose();
 }
 
-void HttpServer::SetThreadNums(int thread_nums)
-{
-    server_->SetThreadPoolSize(thread_nums); // 设置线程池大小
-}
+void HttpServer::SetThreadNums(int thread_nums) { server_->SetThreadPoolSize(thread_nums); }
 
 void HttpServer::ActiveCloseConn(std::weak_ptr<Connection> &conn)
 {
@@ -223,4 +218,30 @@ void HttpServer::ActiveCloseConn(std::weak_ptr<Connection> &conn)
                             std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 重新设置超时
         }
     }
+}
+
+void HttpServer::AddRoute(const std::string &path, const std::string &method, const std::string &handlerName)
+{
+    if (!router_) router_ = std::make_unique<RouteTrie>();
+    router_->addRoute(path, method, handlerName);
+}
+
+void HttpServer::RegisterHandler(const std::string &handlerName, const HttpResponseCallback &cb)
+{
+    route_handlers_[handlerName] = cb;
+}
+
+bool HttpServer::DispatchByRouter(const ConnectionPtr &conn, const HttpRequest &request, HttpResponse *resp)
+{
+    if (!router_) return false;
+    RouteMatch m = router_->findRoute(request.GetUrl(), request.GetMethodString());
+    if (m.handler.empty()) return false;
+    auto it = route_handlers_.find(m.handler);
+    if (it == route_handlers_.end()) return false;
+    if (!m.params.empty()) {
+        HttpRequest reqCopy = request;
+        for (const auto &kv : m.params) reqCopy.SetPathParam(kv.first, kv.second);
+        return it->second(conn, reqCopy, resp);
+    }
+    return it->second(conn, request, resp);
 }

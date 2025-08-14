@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
-project(day25)
+project(myWebMem)
 set(CMAKE_CXX_STANDARD 17)
 # (auto-generated update to include new tests)
 
 # 设置头文件路径
-set(PINE_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/timer/inc ${PROJECT_SOURCE_DIR}/base/inc ${PROJECT_SOURCE_DIR}/log/inc)
+set(PINE_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc)
 
 # 设置动态库文件
-file(GLOB_RECURSE pine_sources ${PROJECT_SOURCE_DIR}/tcp/*.cpp ${PROJECT_SOURCE_DIR}/http/*.cpp ${PROJECT_SOURCE_DIR}/timer/*.cpp ${PROJECT_SOURCE_DIR}/base/*.cpp ${PROJECT_SOURCE_DIR}/log/*.cpp ${PROJECT_SOURCE_DIR}/log/Logger.cpp)
+file(GLOB_RECURSE pine_sources ${PROJECT_SOURCE_DIR}/mymuduo/tcp/*.cpp ${PROJECT_SOURCE_DIR}/http/*.cpp ${PROJECT_SOURCE_DIR}/mymuduo/timer/*.cpp ${PROJECT_SOURCE_DIR}/mymuduo/base/*.cpp ${PROJECT_SOURCE_DIR}/mymuduo/log/*.cpp ${PROJECT_SOURCE_DIR}/mymuduo/log/Logger.cpp ${PROJECT_SOURCE_DIR}/mymuduo/router/*.cpp)
 include_directories(${PINE_SRC_INCLUDE_DIR})        # 添加头文件路径
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 add_library(pine_shared SHARED ${pine_sources})
@@ -25,7 +25,7 @@ foreach(source_file ${main_sources})
     get_filename_component(file_name ${source_file} NAME_WE)    # 获取文件名（不含路径和扩展名）
     add_executable(${file_name} ${source_file})                 # 添加可执行文件
     target_link_libraries(${file_name} pine_shared)             # 链接 pine_shared 动态库
-        target_include_directories(${file_name} PRIVATE ${PROJECT_SOURCE_DIR}/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/timer/inc ${PROJECT_SOURCE_DIR}/base/inc ${PROJECT_SOURCE_DIR}/log/inc) # 添加头文件路径
+    target_include_directories(${file_name} PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径
     set_target_properties(${file_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test/bin)
     
 endforeach(source_file ${main_sources})

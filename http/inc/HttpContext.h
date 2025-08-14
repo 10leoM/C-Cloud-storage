@@ -80,13 +80,13 @@ private:
     // chunked 解析临时字段
     enum class ChunkState
     {
-        SIZE,
-        SIZE_CR,
-        DATA,
-        DATA_CR,
-        DATA_LF,
-        TRAILERS,
-        COMPLETE
+        SIZE,       // 解析块大小
+        SIZE_CR,    // 解析块大小后的回车
+        DATA,       // 数据块
+        DATA_CR,    // 数据块后的回车
+        DATA_LF,    // 数据块后的换行
+        TRAILERS,   // 解析 trailer
+        COMPLETE    // 完成
     };
     ChunkState chunk_state_ = ChunkState::SIZE;
     size_t current_chunk_size_ = 0; // 当前块剩余字节
