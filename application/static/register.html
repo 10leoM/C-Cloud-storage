@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>注册 - 文件上传系统</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .register-form {
+            border: 2px solid #2196F3;
+            padding: 30px;
+            text-align: center;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        .auth-title {
+            color: #2196F3;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        .auth-subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            border-color: #2196F3;
+            outline: none;
+            box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+        }
+        .error-message {
+            color: #f44336;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+        .register-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        .register-button:hover {
+            background-color: #1976D2;
+        }
+        .auth-links {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        .auth-links a {
+            color: #2196F3;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+        .password-requirements {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            text-align: left;
+        }
+        .password-requirements ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .password-requirements li {
+            margin: 2px 0;
+        }
+        .requirement-met {
+            color: #4CAF50;
+        }
+        .requirement-not-met {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-form">
+        <h2 class="auth-title">创建账户</h2>
+        <p class="auth-subtitle">注册一个新账户以使用文件上传系统</p>
+        
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" placeholder="请输入用户名（3-20个字符）">
+            <div id="username-error" class="error-message"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">电子邮箱</label>
+            <input type="email" id="email" placeholder="请输入电子邮箱">
+            <div id="email-error" class="error-message"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" placeholder="请输入密码">
+            <div id="password-error" class="error-message"></div>
+            <div class="password-requirements">
+                密码要求：
+                <ul>
+                    <li id="length-requirement">长度至少8个字符</li>
+                    <li id="uppercase-requirement">包含大写字母</li>
+                    <li id="lowercase-requirement">包含小写字母</li>
+                    <li id="number-requirement">包含数字</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="confirm-password">确认密码</label>
+            <input type="password" id="confirm-password" placeholder="请再次输入密码">
+            <div id="confirm-password-error" class="error-message"></div>
+        </div>
+        
+        <button class="register-button" onclick="register()">注册</button>
+        
+        <div class="auth-links">
+            <a href="index.html">已有账号？立即登录</a>
+        </div>
+    </div>
+
+    <script>
+    // 密码要求检查
+    function checkPasswordRequirements(password) {
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password)
+        };
+
+        // 更新UI显示
+        document.getElementById('length-requirement').className = 
+            requirements.length ? 'requirement-met' : 'requirement-not-met';
+        document.getElementById('uppercase-requirement').className = 
+            requirements.uppercase ? 'requirement-met' : 'requirement-not-met';
+        document.getElementById('lowercase-requirement').className = 
+            requirements.lowercase ? 'requirement-met' : 'requirement-not-met';
+        document.getElementById('number-requirement').className = 
+            requirements.number ? 'requirement-met' : 'requirement-not-met';
+
+        return requirements.length && requirements.uppercase && 
+               requirements.lowercase && requirements.number;
+    }
+
+    // 实时检查密码要求
+    document.getElementById('password').addEventListener('input', function(e) {
+        checkPasswordRequirements(e.target.value);
+    });
+
+    // 表单验证
+    function validateForm() {
+        let hasError = false;
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        // 重置错误提示
+        document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+
+        // 用户名验证
+        if (!username) {
+            document.getElementById('username-error').textContent = '请输入用户名';
+            document.getElementById('username-error').style.display = 'block';
+            hasError = true;
+        } else if (username.length < 3 || username.length > 20) {
+            document.getElementById('username-error').textContent = '用户名长度必须在3-20个字符之间';
+            document.getElementById('username-error').style.display = 'block';
+            hasError = true;
+        }
+
+        // 邮箱验证
+        if (!email) {
+            document.getElementById('email-error').textContent = '请输入电子邮箱';
+            document.getElementById('email-error').style.display = 'block';
+            hasError = true;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            document.getElementById('email-error').textContent = '请输入有效的电子邮箱地址';
+            document.getElementById('email-error').style.display = 'block';
+            hasError = true;
+        }
+
+        // 密码验证
+        if (!password) {
+            document.getElementById('password-error').textContent = '请输入密码';
+            document.getElementById('password-error').style.display = 'block';
+            hasError = true;
+        } else if (!checkPasswordRequirements(password)) {
+            document.getElementById('password-error').textContent = '密码不符合要求';
+            document.getElementById('password-error').style.display = 'block';
+            hasError = true;
+        }
+
+        // 确认密码验证
+        if (!confirmPassword) {
+            document.getElementById('confirm-password-error').textContent = '请确认密码';
+            document.getElementById('confirm-password-error').style.display = 'block';
+            hasError = true;
+        } else if (password !== confirmPassword) {
+            document.getElementById('confirm-password-error').textContent = '两次输入的密码不一致';
+            document.getElementById('confirm-password-error').style.display = 'block';
+            hasError = true;
+        }
+
+        return !hasError;
+    }
+
+    // 注册函数
+    function register() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0) {
+                alert('注册成功！即将跳转到登录页面...');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                // 显示具体的错误信息
+                if (data.message.includes('用户名')) {
+                    document.getElementById('username-error').textContent = data.message;
+                    document.getElementById('username-error').style.display = 'block';
+                } else if (data.message.includes('邮箱')) {
+                    document.getElementById('email-error').textContent = data.message;
+                    document.getElementById('email-error').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
+            }
+        })
+        .catch(error => {
+            alert('注册失败: ' + error);
+        });
+    }
+
+    // 添加回车键支持
+    const inputs = ['username', 'email', 'password', 'confirm-password'];
+    inputs.forEach((id, index) => {
+        document.getElementById(id).addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (index < inputs.length - 1) {
+                    document.getElementById(inputs[index + 1]).focus();
+                } else {
+                    register();
+                }
+            }
+        });
+    });
+    </script>
+</body>
+</html> 
