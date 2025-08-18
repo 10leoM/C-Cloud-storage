@@ -17,3 +17,21 @@ FileUploadContext::FileUploadContext(const std::string &filename, const std::str
         LOG_ERROR<<"Failed to open file: " << filename_ << " for writing";
     }
 }
+
+FileUploadContext::~FileUploadContext()
+{
+    if(file_.is_open())
+    {
+        file_.close();
+    }
+}
+
+void FileUploadContext::writeData(const char *data, size_t len)
+{
+    if(file_.is_open())
+    {
+        file_.write(data, len);
+        file_.flush();
+        totalBytes_ += len;
+    }
+}

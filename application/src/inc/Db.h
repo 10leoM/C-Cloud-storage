@@ -5,15 +5,15 @@
 #include <string>
 #include <mysql/mysql.h>
 
-class DbConfig
+class Db
 {
 public:
-    DbConfig(const std::string &host, const std::string &user, const std::string &password, const std::string &dbname, unsigned int port);
-    ~DbConfig();
+    Db(const std::string &host, const std::string &user, const std::string &password, const std::string &dbname, unsigned int port);
+    ~Db();
 
     bool connect();                           // 建立连接
     bool exec(const std::string &sql);        // 执行 SQL 语句
-    MYSQL_RES *query(const std::string &sql); // 查询并返回结果集
+    MYSQL_RES *query(const std::string &sql); // 执行SQL语句并返回结果集
     std::string escape(const std::string &s); // 转义字符串
 
     unsigned long long insertId() const; // 最近一次插入的自增ID

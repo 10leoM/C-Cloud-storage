@@ -2,21 +2,21 @@
 #include "Logger.h"
 #include <mysql/mysql.h>
 
-DbConfig::DbConfig(const std::string& host,
+Db::Db(const std::string& host,
        const std::string& user,
        const std::string& password,
        const std::string& dbname,
        unsigned int port)
     : mysql_(nullptr), host_(host), user_(user), password_(password), dbname_(dbname), port_(port) {}
 
-DbConfig::~DbConfig() {
+Db::~Db() {
     if (mysql_) {
         mysql_close(mysql_);
         mysql_ = nullptr;
     }
 }
 
-bool DbConfig::connect() {
+bool Db::connect() {
     if(mysql_) return true;
     mysql_ = mysql_init(nullptr);
     if (!mysql_) {
@@ -36,7 +36,7 @@ bool DbConfig::connect() {
     return true;
 }
 
-bool DbConfig::exec(const std::string& sql) {
+bool Db::exec(const std::string& sql) {
     if (!mysql_) return false;
     if (mysql_query(mysql_, sql.c_str()) != 0) {
         LOG_ERROR << "MySQL exec failed: " << mysql_error(mysql_);
@@ -45,12 +45,12 @@ bool DbConfig::exec(const std::string& sql) {
     return true;
 }
 
-MYSQL_RES* DbConfig::query(const std::string& sql) {
+MYSQL_RES* Db::query(const std::string& sql) {
     if (!exec(sql)) return nullptr;
     return mysql_store_result(mysql_);
 }
 
-std::string DbConfig::escape(const std::string& s) {
+std::string Db::escape(const std::string& s) {
     if (!mysql_) return s;
     std::string out;
     out.resize(s.size() * 2 + 1);
@@ -59,11 +59,11 @@ std::string DbConfig::escape(const std::string& s) {
     return out;
 }
 
-unsigned long long DbConfig::insertId() const {
+unsigned long long Db::insertId() const {
     if (!mysql_) return 0;
     return mysql_insert_id(mysql_);
 }
 
-bool DbConfig::isConnected() const {
+bool Db::isConnected() const {
     return mysql_ != nullptr;
 }
