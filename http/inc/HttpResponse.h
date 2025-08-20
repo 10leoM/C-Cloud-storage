@@ -14,6 +14,7 @@ enum HttpStatusCode
     k301K = 301,              // 永久重定向
     k302K = 302,              // 临时重定向
     BadRequest = 400,         // 错误请求
+    Unauthorized = 401,       // 未授权
     Forbidden = 403,          // 禁止访问
     NotFound = 404,           // 未找到
     RangeNotSatisfiable = 416, // Range 无法满足

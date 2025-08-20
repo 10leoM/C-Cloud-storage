@@ -14,22 +14,6 @@
 
 bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &conn, const HttpRequest &request, HttpResponse *resp)
 {
-    // 0) 路由优先：按 method+path 匹配，并按 handlerName 分派；将匹配到的路径参数注入到请求副本
-    if (router_) {
-        RouteMatch m = router_->findRoute(request.GetUrl(), request.GetMethodString());
-        if (!m.handler.empty()) {
-            auto it = route_handlers_.find(m.handler);
-            if (it != route_handlers_.end()) {
-                if (!m.params.empty()) {
-                    HttpRequest reqCopy = request; // 复制以便注入路径参数
-                    for (const auto &kv : m.params) reqCopy.SetPathParam(kv.first, kv.second);
-                    return it->second(conn, reqCopy, resp);
-                }
-                return it->second(conn, request, resp);
-            }
-        }
-    }
-
     // 简易静态文件: /static/... 或根路径
     if (request.GetMethod() == HttpMethod::kGet || request.GetMethod() == HttpMethod::kHead) {
         if (StaticFileHandler::Handle("./files", request, resp)) {
@@ -64,10 +48,13 @@ HttpServer::~HttpServer() {}
 
 void HttpServer::SetHttpCallback(const HttpResponseCallback &cb) { responseCallback_ = std::move(cb); }
 
+void HttpServer::SetOnConnectionCallback(const std::function<void(const ConnectionPtr &)> &cb) { onConnectionCallback_ = cb; }
+
 void HttpServer::start() { server_->start(); }
 
 void HttpServer::onConnection(const ConnectionPtr &conn)
 {
+    if (onConnectionCallback_) onConnectionCallback_(conn); // 用户自定义连接回调
     if (auto_close_conn_)
         loop_->RunAfter(AUTOCLOSETIMEOUT,std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 使用弱引用避免循环引用
 }
@@ -109,7 +96,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
     }
 }
 
-void HttpServer::onRequest(const ConnectionPtr &conn, const HttpRequest &request)
+void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
 {
     std::string connection_state = request.GetHeader("Connection");
     bool Close = (connection_state == "close" || (request.GetVersion() == HttpVersion::kHttp10 && connection_state != "keep-alive")); // 是否关闭连接
@@ -158,13 +145,15 @@ void HttpServer::onRequest(const ConnectionPtr &conn, const HttpRequest &request
     // 同步回包
     if(response.GetBodyType() == HttpBodyType::HTML_TYPE) {
         conn->Send(response.GetMessage());
-    } else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) {
+    } 
+    else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) {
         conn->Send(response.GetBeforeBody());
         if (response.HasRange()) {
             off_t start = static_cast<off_t>(response.GetRangeStart());
             size_t len = static_cast<size_t>(response.GetRangeEnd() - response.GetRangeStart() + 1);
             conn->SendFileRange(response.GetFileFd(), start, len);
-        } else {
+        } 
+        else {
             conn->SendFile(response.GetFileFd(), response.GetContentLength());
         }
         int ret = close(response.GetFileFd());
@@ -182,13 +171,15 @@ void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
     HttpResponse *resp = context->GetDeferredResponse();
     if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) {
         conn->Send(resp->GetMessage());
-    } else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) {
+    } 
+    else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) {
         conn->Send(resp->GetBeforeBody());
         if (resp->HasRange()) {
             off_t start = static_cast<off_t>(resp->GetRangeStart());
             size_t len = static_cast<size_t>(resp->GetRangeEnd() - resp->GetRangeStart() + 1);
             conn->SendFileRange(resp->GetFileFd(), start, len);
-        } else {
+        } 
+        else {
             conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
         }
         int ret = close(resp->GetFileFd());
@@ -231,17 +222,17 @@ void HttpServer::RegisterHandler(const std::string &handlerName, const HttpRespo
     route_handlers_[handlerName] = cb;
 }
 
-bool HttpServer::DispatchByRouter(const ConnectionPtr &conn, const HttpRequest &request, HttpResponse *resp)
-{
-    if (!router_) return false;
-    RouteMatch m = router_->findRoute(request.GetUrl(), request.GetMethodString());
-    if (m.handler.empty()) return false;
-    auto it = route_handlers_.find(m.handler);
-    if (it == route_handlers_.end()) return false;
-    if (!m.params.empty()) {
-        HttpRequest reqCopy = request;
-        for (const auto &kv : m.params) reqCopy.SetPathParam(kv.first, kv.second);
-        return it->second(conn, reqCopy, resp);
-    }
-    return it->second(conn, request, resp);
-}
+// bool HttpServer::DispatchByRouter(const ConnectionPtr &conn, HttpRequest &request, HttpResponse *resp)
+// {
+//     if (!router_) return false;
+//     RouteMatch m = router_->findRoute(request.GetUrl(), request.GetMethodString());
+//     if (m.handler.empty()) return false;
+//     auto it = route_handlers_.find(m.handler);
+//     if (it == route_handlers_.end()) return false;
+//     if (!m.params.empty()) {
+//         HttpRequest reqCopy = request;
+//         for (const auto &kv : m.params) reqCopy.SetPathParam(kv.first, kv.second);
+//         return it->second(conn, reqCopy, resp);
+//     }
+//     return it->second(conn, request, resp);
+// }

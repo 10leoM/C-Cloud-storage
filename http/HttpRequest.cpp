@@ -112,7 +112,9 @@ const std::vector<std::string> &HttpRequest::GetQueryValues(const std::string &k
 const std::map<std::string, std::vector<std::string>> &HttpRequest::GetQueryParamMap() const { return query_params_multi_; }
 
 void HttpRequest::SetPathParam(const std::string& key, const std::string& value) { path_params_[key] = value; }
-std::string HttpRequest::GetPathParam(const std::string& key) const {
+void HttpRequest::SetPathParam(const std::map<std::string, std::string>& params) { path_params_ = params; }
+std::string HttpRequest::GetPathParam(const std::string& key) const 
+{
     auto it = path_params_.find(key);
     if (it != path_params_.end()) return it->second;
     return {};
@@ -260,7 +262,7 @@ bool HttpRequest::ExtractPathParams(const std::string &pattern)
 }
 
 // Range: bytes=start-end 或 bytes=-suffix
-bool HttpRequest::()
+bool HttpRequest::ParseRangeHeader()
 {
     has_range_ = false; range_start_ = 0; range_end_ = -1; range_suffix_ = false;
     auto it = headers_.find("Range");

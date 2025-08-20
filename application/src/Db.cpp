@@ -63,7 +63,3 @@ unsigned long long Db::insertId() const {
     if (!mysql_) return 0;
     return mysql_insert_id(mysql_);
 }
-
-bool Db::isConnected() const {
-    return mysql_ != nullptr;
-}

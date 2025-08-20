@@ -7,22 +7,22 @@
 // 文件分享记录
 struct ShareRecord
 {
-    int shareId;
-    int fileId;
-    int ownerId;
-    std::optional<int> sharedWithId;        //
+    int shareId;                            // 分享ID
+    int fileId;                             // 文件ID
+    int ownerId;                            // 所有者ID
+    std::optional<int> sharedWithId;        // 共享给的用户ID
     std::string shareType;                  // public/protected/user
     std::string shareCode;                  // 32 chars
     std::optional<std::string> extractCode; // nullable
-    std::string createdAt;
-    std::optional<std::string> expireTime; // nullable
+    std::string createdAt;                  // 创建时间
+    std::optional<std::string> expireTime;  // nullable
     // joined file meta
-    std::string serverFilename;
-    std::string originalFilename;
-    uint64_t fileSize;
-    std::string fileType;
-    int fileOwnerId;
-    std::string ownerUsername;
+    std::string serverFilename;            // 服务器文件名
+    std::string originalFilename;          // 原始文件名
+    uint64_t fileSize;                     // 文件大小
+    std::string fileType;                  // 文件类型
+    int fileOwnerId;                       // 文件所有者ID
+    std::string ownerUsername;             // 文件所有者用户名
 };
 
 class SharesRepository

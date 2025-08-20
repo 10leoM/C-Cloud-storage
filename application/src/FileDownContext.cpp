@@ -1,5 +1,6 @@
 #include "FileDownContext.h"
 #include "Logger.h"
+#include <vector>
 
 FileDownContext::FileDownContext(const std::string &filepath, const std::string &originalFilename)
     : filepath_(filepath), originalFilename_(originalFilename), fileSize_(0), currentPosition_(0), isComplete_(false)

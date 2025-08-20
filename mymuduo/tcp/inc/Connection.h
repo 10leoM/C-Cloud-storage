@@ -47,7 +47,7 @@ private:
     std::function<void(const std::shared_ptr<Connection> &, size_t)> highWaterMarkCallback; // 高水位
     size_t highWaterMark_ = 64 * 1024;                                                      // 默认 64KB
 
-    // 协议无关的通用 context（替换之前固定的 HttpContext）
+    // 协议无关的通用context
     std::shared_ptr<void> context;
 
     void ReadNonBlocking();  // 非阻塞读取数据F

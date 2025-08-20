@@ -24,7 +24,7 @@ public:
 
     void writeData(const char *data, size_t len);
 
-    uintmax_t getTotalBytes() const { return totalbytes_; }
+    uintmax_t getTotalBytes() const { return totalBytes_; }
     const std::string &getFilename() const { return filename_; }
     const std::string &getOriginalFilename() const { return originalFilename_; }
 
@@ -37,7 +37,7 @@ private:
     std::string filename_;         // 保存在服务器上的文件名
     std::string originalFilename_; // 原始文件名
     std::ofstream file_;           // 文件流对象
-    uintmax_t totalbytes_;         // 已写入的总字节数
+    uintmax_t totalBytes_;         // 已写入的总字节数
     State state_;                  // 当前状态
     std::string boundary_;         // multipart边界
 };

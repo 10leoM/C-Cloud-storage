@@ -74,6 +74,7 @@ public:
 
     // 手动注入路径参数(路由匹配阶段调用)
     void SetPathParam(const std::string &key, const std::string &value);
+    void SetPathParam(const std::map<std::string, std::string>& params);
     std::string GetPathParam(const std::string &key) const;
     const std::map<std::string, std::string> &GetPathParams() const;
 

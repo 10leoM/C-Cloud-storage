@@ -140,6 +140,13 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
         if (!channel->isWriting())
             channel->enableWriting(true);
     }
+    else
+    {
+        // 如果没有剩余数据，说明发送缓冲区已经清空，取消写事件监听
+        channel->disableWriting();
+        if (writeCompleteCallback)
+            writeCompleteCallback(shared_from_this());
+    }
 }
 
 void Connection::SendFile(int filefd, int size) // 发送文件
@@ -319,6 +326,7 @@ void Connection::shutdown()
         if (!channel->isWriting() && sendBuffer->GetReadablebytes() == 0)
         {
             ::shutdown(fd, SHUT_WR);
+            // HandleClose(); // 立即关闭连接
         }
     }
 }

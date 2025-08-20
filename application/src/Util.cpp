@@ -3,6 +3,9 @@
 #include <cstring>
 #include <chrono>
 #include <algorithm>
+#include <sstream>
+#include <ios>
+#include <sstream>
 
 std::string RandomString(size_t len, const char *charset)
 {
@@ -34,7 +37,7 @@ std::string UrlDecode(const std::string &encoded) // URL 解码（与原有实�
     int ii;
     size_t len = encoded.length();
 
-    for (int i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
     {
         if (encoded[i] != '%')
         {
