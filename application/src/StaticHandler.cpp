@@ -9,6 +9,7 @@ bool StaticHandler::handleIndex(const std::shared_ptr<Connection> &conn, HttpReq
     resp->SetStatusCode(HttpStatusCode::OK);
     resp->SetStatusMessage("OK");
     resp->SetContentType("text/html; charset=utf-8");
+    resp->SetBodyType(HTML_TYPE);
 
     std::string path = req.GetUrl();
     std::string currentDir = __FILE__;                                                                 // 找到当前文件所在目录
@@ -32,12 +33,19 @@ bool StaticHandler::handleIndex(const std::shared_ptr<Connection> &conn, HttpReq
             conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
         return true;
     }
-    std::string body;
+    // std::string html((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    // resp->SetCloseConnection(true);
+    // resp->SetBody(html);
+    // resp->SetContentLength(html.size());
     std::string line;
-    while (std::getline(file, line))
-        body += line + "\n";
-    file.close();
+    std::string body;
+    while (std::getline(file, line)) // 逐行读取文件内容
+    {
+        body += line;
+    }
     resp->SetBody(body);
+    resp->SetContentLength(static_cast<int>(body.size()));
+    resp->SetCloseConnection(true); // 发送完后关闭连接
     if (conn)
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c)
                                        { c->shutdown(); return true; });
@@ -66,6 +74,8 @@ bool StaticHandler::handleFavicon(const std::shared_ptr<Connection> &conn, HttpR
         resp->SetStatusMessage("OK");
         resp->SetContentType("image/x-icon");
         resp->SetBody(iconData);
+        resp->SetContentLength(iconData.size());
+        resp->SetCloseConnection(true);
     }
     if (conn)
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
@@ -132,7 +142,8 @@ bool StaticHandler::handleStaticAsset(const std::shared_ptr<Connection> &conn, H
     resp->SetStatusCode(HttpStatusCode::OK);
     resp->SetStatusMessage("OK");
     resp->SetContentType(ct);
-    resp->AddHeader("Connection","close");
+    resp->SetContentLength(data.size());
+    resp->SetCloseConnection(true);
     resp->SetBody(data);
     conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
     return true;

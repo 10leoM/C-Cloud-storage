@@ -7,7 +7,6 @@
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "Connection.h"
-#include "StaticFileHandler.h"
 #include "StaticHandler.h"
 #include "AuthHandler.h"
 #include "FileHandler.h"
@@ -19,18 +18,13 @@ class Router
 public:
     using Handler = std::function<bool(const std::shared_ptr<Connection> &, HttpRequest &, HttpResponse *)>;
 
-    void addRouteExact(const std::string &path,
-                       HttpMethod method,
-                       Handler handler)
+    void addRouteExact(const std::string &path, HttpMethod method, Handler handler)
     {
         std::string pattern = "^" + escapeRegex(path) + "$";
         routes_.emplace_back(Route{std::regex(pattern), {}, std::move(handler), method});
     }
 
-    void addRouteRegex(const std::string &pattern,
-                       HttpMethod method,
-                       Handler handler,
-                       const std::vector<std::string> &params)
+    void addRouteRegex(const std::string &pattern, HttpMethod method, Handler handler,const std::vector<std::string> &params)
     {
         routes_.emplace_back(Route{std::regex(pattern), params, std::move(handler), method});
     }

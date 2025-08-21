@@ -11,7 +11,7 @@ using json = nlohmann::json;
 // 这里假设 Connection 类有 Send 方法用于发送数据
 // 以及 HandleClose 方法用于关闭连接
 
-void sendError(HttpResponse* resp, const std::string &message, int code, const std::shared_ptr<Connection> &conn) 
+inline void sendError(HttpResponse* resp, const std::string &message, int code, const std::shared_ptr<Connection> &conn) 
 {
     json out = {{"code", code}, {"message", message}};
     resp->SetStatusCode(static_cast<HttpStatusCode>(code));
@@ -23,7 +23,7 @@ void sendError(HttpResponse* resp, const std::string &message, int code, const s
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
 }
 
-void sendJson(HttpResponse* resp, json &body, const std::shared_ptr<Connection> &conn, HttpStatusCode code = HttpStatusCode::OK) 
+inline void sendJson(HttpResponse* resp, json &body, const std::shared_ptr<Connection> &conn, HttpStatusCode code = HttpStatusCode::OK) 
 {
     resp->SetStatusCode(code);
     resp->SetStatusMessage(code==HttpStatusCode::OK?"OK":"Internal Server Error");

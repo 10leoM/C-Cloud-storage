@@ -122,7 +122,7 @@ public:
     }
 
     // 返回 true 表示同步处理完成，false 表示异步处理
-    bool onRequest(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
+    bool HttpCallback(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
     {
         std::string path = req.GetUrl();
         LOG_INFO << "Headers " << req.GetMethodString() << " " << path;
@@ -199,7 +199,8 @@ int main()
 {
     Logger::SetLogLevel(Logger::INFO);
     EventLoop loop;
-    HttpServer server(&loop, "127.1.0.0", 8000, false);
+    // 监听 0.0.0.0 以便通过 localhost(127.0.0.1) 或本机 IP 访问
+    HttpServer server(&loop, "0.0.0.0", 8080, false);
 
     // 创建HTTP处理器
     auto handler = std::make_shared<HttpUploadHandler>(4);
@@ -215,13 +216,14 @@ int main()
     server.SetHttpCallback(
         [handler](const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
         {
-            return handler->onRequest(conn, req, resp);
+            return handler->HttpCallback(conn, req, resp);
         });
 
-    server.SetThreadNums(0);
+    server.SetThreadNums(std::thread::hardware_concurrency());
+    std::cout << "HTTP upload server is running on port 8080..." << std::endl;
+    std::cout << "Please visit http://localhost:8080" << std::endl;
     server.start();
-    std::cout << "HTTP upload server is running on port 8000..." << std::endl;
-    std::cout << "Please visit http://localhost:8000" << std::endl;
+    // 进入事件循环，保持服务运行
     loop.loop();
     return 0;
 }

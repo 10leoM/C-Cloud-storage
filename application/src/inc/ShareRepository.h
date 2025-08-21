@@ -28,8 +28,8 @@ struct ShareRecord
 class SharesRepository
 {
 public:
-    SharesRepository(Db &db);
-    ~SharesRepository();
+    SharesRepository(Db &db) : db_(db) {}
+    ~SharesRepository() = default;
 
     std::optional<ShareRecord> getByCode(const std::string &code)
     {
