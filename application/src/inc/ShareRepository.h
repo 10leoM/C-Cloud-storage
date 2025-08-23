@@ -13,9 +13,9 @@ struct ShareRecord
     std::optional<int> sharedWithId;        // 共享给的用户ID
     std::string shareType;                  // public/protected/user
     std::string shareCode;                  // 32 chars
-    std::optional<std::string> extractCode; // nullable
+    std::optional<std::string> extractCode; // 提取码 6 chars
     std::string createdAt;                  // 创建时间
-    std::optional<std::string> expireTime;  // nullable
+    std::optional<std::string> expireTime;  // 过期时间
     // joined file meta
     std::string serverFilename;            // 服务器文件名
     std::string originalFilename;          // 原始文件名

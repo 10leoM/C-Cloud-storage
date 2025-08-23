@@ -33,19 +33,10 @@ bool StaticHandler::handleIndex(const std::shared_ptr<Connection> &conn, HttpReq
             conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
         return true;
     }
-    // std::string html((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    // resp->SetCloseConnection(true);
-    // resp->SetBody(html);
-    // resp->SetContentLength(html.size());
-    std::string line;
-    std::string body;
-    while (std::getline(file, line)) // 逐行读取文件内容
-    {
-        body += line;
-    }
-    resp->SetBody(body);
-    resp->SetContentLength(static_cast<int>(body.size()));
-    resp->SetCloseConnection(true); // 发送完后关闭连接
+    std::string html((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    resp->SetCloseConnection(true);
+    resp->SetBody(html);
+    resp->SetContentLength(html.size());
     if (conn)
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c)
                                        { c->shutdown(); return true; });

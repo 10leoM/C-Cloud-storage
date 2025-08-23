@@ -34,12 +34,12 @@ void registerRoutes(
                          { return staticHandler.handleStaticAsset(c, r, s); }, {"path"});
     router.addRouteExact("/register.html", HttpMethod::kGet, [&staticHandler](auto &c, auto &r, auto *s)
                          { return staticHandler.handleIndex(c, r, s); });
-    // router.addRouteRegex("/share/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
-    //                      { return shareHandler.handleShareAccess(c, r, s); }, {"code"});
-    // router.addRouteRegex("/share/download/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
-    //                      { return shareHandler.handleShareDownload(c, r, s); }, {"filename"});
-    // router.addRouteRegex("/share/info/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
-    //                      { return shareHandler.handleShareInfo(c, r, s); }, {"code"});
+    router.addRouteRegex("/share/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
+                         { return shareHandler.handleShareAccess(c, r, s); }, {"code"});
+    router.addRouteRegex("/share/download/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
+                         { return shareHandler.handleShareDownload(c, r, s); }, {"filename"});
+    router.addRouteRegex("/share/info/([^/]+)", HttpMethod::kGet, [&shareHandler](auto &c, auto &r, auto *s)
+                         { return shareHandler.handleShareInfo(c, r, s); }, {"code"});
 
     // 需要会话验证的路由（具体校验放在 handler 内部）
     router.addRouteExact("/upload", HttpMethod::kPost, [&fileHandler](auto &c, auto &r, auto *s)
@@ -52,10 +52,10 @@ void registerRoutes(
                          { return fileHandler.handleDownload(c, r, s); }, {"filename"});
     router.addRouteRegex("/delete/([^/]+)", HttpMethod::kDelete, [&fileHandler](auto &c, auto &r, auto *s)
                          { return fileHandler.handleDelete(c, r, s); }, {"filename"});
-    // router.addRouteExact("/share", HttpMethod::kPost, [&shareHandler](auto &c, auto &r, auto *s)
-    //                      { return shareHandler.handleShareFile(c, r, s); });
-    // router.addRouteExact("/users/search", HttpMethod::kGet, [&userHandler](auto &c, auto &r, auto *s)
-    //                      { return userHandler.handleSearchUsers(c, r, s); });
+    router.addRouteExact("/share", HttpMethod::kPost, [&shareHandler](auto &c, auto &r, auto *s)
+                         { return shareHandler.handleShareFile(c, r, s); });
+    router.addRouteExact("/users/search", HttpMethod::kGet, [&userHandler](auto &c, auto &r, auto *s)
+                         { return userHandler.handleSearchUsers(c, r, s); });
     router.addRouteExact("/logout", HttpMethod::kPost, [&authHandler](auto &c, auto &r, auto *s)
                          { return authHandler.handleLogout(c, r, s); });
 }

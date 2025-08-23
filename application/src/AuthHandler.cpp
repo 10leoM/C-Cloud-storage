@@ -134,7 +134,11 @@ std::string AuthHandler::generateSessionId()
 
 void AuthHandler::saveSession(const std::string &sessionId, int userId, const std::string &username)
 {
-    std::string query = "INSERT INTO sessions (session_id, user_id, username) VALUES ('" + db_.escape(sessionId) + "', " + std::to_string(userId) + ", '" + db_.escape(username) + "')";
+    // 设置会话过期时间，例如 7 天后；与 validateSession 中 expire_time > NOW() 保持一致
+    std::string query =
+        "INSERT INTO sessions (session_id, user_id, username, expire_time) VALUES ('" +
+        db_.escape(sessionId) + "', " + std::to_string(userId) + ", '" + db_.escape(username) +
+        "', NOW() + INTERVAL 7 DAY)";
     db_.exec(query);
 }
 

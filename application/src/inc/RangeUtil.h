@@ -16,7 +16,7 @@ namespace HttpRange
 
     // Parse HTTP Range header like: "bytes=start-end" or "bytes=start-"
     // Only supports a single range. If invalid or missing, returns {isRange=false}.
-    RangeSpec parse(const std::string &header, uint64_t fileSize)
+    inline RangeSpec parse(const std::string &header, uint64_t fileSize)
     {
         RangeSpec spec;
         if(header.empty() || fileSize == 0)
