@@ -33,10 +33,10 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
 
     std::string listType = req.GetQueryValue("type");
     listType = listType == "" ? "my" : listType;
-    json response;
-    response["code"] = 0;
-    response["message"] = "Success";
-    json files = json::array();
+    json out;
+    out["code"] = 0;
+    out["message"] = "Success";
+    json files = json::array();     // json数组，存储文件信息
     std::vector<FileRow> rows;
     if (listType == "my")
         rows = filesRepo_.listMyFiles(userId);
@@ -50,7 +50,7 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
         json shareInfo = nullptr;
         if (fr.isOwner)
         {
-            auto si = filesRepo_.getShareInfo(fr.id);
+            auto si = filesRepo_.getShareInfo(fr.id);               // 获取分享信息
             if (si)
             {
                 shareInfo = {{"type", si->shareType}};
@@ -69,12 +69,12 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
             }
         }
         json fileInfo = {{"id", fr.id}, {"name", fr.filename}, {"originalName", fr.originalFilename}, {"size", fr.size}, {"type", fr.type}, {"createdAt", fr.createdAt}, {"isOwner", fr.isOwner}};
-        if (shareInfo)
+        if (shareInfo != nullptr)
             fileInfo["shareInfo"] = shareInfo;
         files.push_back(fileInfo);
     }
-    response["files"] = files;
-    sendJson(resp, response, conn, HttpStatusCode::OK);
+    out["files"] = files;
+    sendJson(resp, out, conn, HttpStatusCode::OK);
     return true;
 }
 
@@ -128,6 +128,7 @@ bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequ
 
 bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
+    // 获取SessionID，用户信息
     std::string sessionId = req.GetHeader("X-Session-ID");
     if (sessionId.empty())
         sessionId = req.GetQueryValue("sessionId");
@@ -235,17 +236,17 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
         return true;
     }
 
-    std::shared_ptr<HttpContext> httpContext = conn->getContext<HttpContext>();
+    std::shared_ptr<HttpContext> httpContext = conn->GetContext();
     if (!httpContext)
     {
         sendError(resp, "Internal Server Error", HttpStatusCode::InternalServerError, conn);
         return true;
     }
-    std::shared_ptr<FileDownContext> downContext = conn->getContext<FileDownContext>(); // 试图获取已有的下载上下文
+    std::shared_ptr<FileDownContext> downContext = httpContext->GetContext<FileDownContext>(); // 试图获取已有的下载上下文
     if (!downContext)
     {
         downContext = std::make_shared<FileDownContext>(filepath, originalFilename);
-        conn->setContext(downContext);
+        httpContext->SetContext(downContext);
         if (rs.isRange)
         {
             resp->SetStatusCode(HttpStatusCode::PartialContent);
@@ -258,6 +259,8 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
             resp->SetStatusMessage("OK");
         }
         resp->SetContentType("application/octet-stream");
+        resp->SetBodyType(HttpBodyType::HTML_TYPE);
+        resp->SetContentLength(fileSize);
         resp->AddHeader("Content-Disposition", "attachment; filename=\"" + originalFilename + "\"");
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "keep-alive");
@@ -286,13 +289,13 @@ bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequ
     }
 
     // 处理上传
-    auto httpContext = std::static_pointer_cast<HttpContext>(conn->getContext<HttpContext>());
+    auto httpContext = std::static_pointer_cast<HttpContext>(conn->GetContext());
     if (!httpContext)
     {
         sendError(resp, "Internal Server Error", HttpStatusCode::InternalServerError, conn);
         return true;
     }
-    std::shared_ptr<FileUploadContext> uploadContext = conn->getContext<FileUploadContext>();
+    std::shared_ptr<FileUploadContext> uploadContext = httpContext->GetContext<FileUploadContext>();
     // 初始化上传上下文
     if (!uploadContext)
     {
@@ -326,7 +329,7 @@ bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequ
         std::string filename = UniqueFilename("upload");
         std::string filepath = uploadDir_ + "/" + filename;
         uploadContext = std::make_shared<FileUploadContext>(filepath, originalFilename);
-        conn->setContext(uploadContext);
+        httpContext->SetContext(uploadContext);
         uploadContext->setBoundary(boundary);
         std::string body = req.GetBody();
         size_t pos = body.find("\r\n\r\n");
@@ -408,7 +411,7 @@ bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequ
         }
         req.SetBody("");
     }
-
+    // 检查上传是否完成
     if (uploadContext->getState() == FileUploadContext::State::kComplete || httpContext->GetCompleteRequest())
     {
         std::string serverFilename = fs::path(uploadContext->getFilename()).filename().string();
@@ -419,7 +422,7 @@ bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequ
         int fileId = fileIdOpt.value_or(0);
         json out = {{"code", 0}, {"message", "上传成功"}, {"fileId", fileId}, {"filename", serverFilename}, {"originalFilename", originalFilename}, {"size", fileSize}};
         sendJson(resp, out, conn);
-        conn->setContext(nullptr);
+        httpContext->SetContext(std::shared_ptr<void>());
         return true;
     }
     return false;

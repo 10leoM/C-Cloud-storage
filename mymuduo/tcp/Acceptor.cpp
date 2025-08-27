@@ -3,6 +3,7 @@
 #include "InetAddress.h"
 #include "Channel.h"
 #include "util.h"
+#include "Logger.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -22,7 +23,7 @@ Acceptor::Acceptor(EventLoop *_loop, const char *ip, uint16_t port)
     acceptChannel = std::make_unique<Channel>(loop, listenFd);                           // 创建监听套接字的通道
     std::function<void()> acceptCallback = std::bind(&Acceptor::acceptConnection, this); // 设置接受新连接的回调函数
     acceptChannel->setReadCallback(acceptCallback);
-    acceptChannel->enableReading(false); // 设置可读并注册,LT模式
+    acceptChannel->enableReading(false);                                                 // 设置可读并注册,LT模式
     printf("Server started, listening on %s:%d\n", ip, port);
 }
 
@@ -48,10 +49,9 @@ void Acceptor::acceptConnection()
     {
         perror("getsockname error");
     }
-    printf("New client connected: fd %d, peer %s:%d -> local %s:%d\n",
-           clnt_fd,
-           inet_ntoa(peer_addr.addr.sin_addr), ntohs(peer_addr.addr.sin_port),
-           inet_ntoa(local_addr.addr.sin_addr), ntohs(local_addr.addr.sin_port));
+    LOG_INFO << "New connection accepted: fd=" << clnt_fd
+             << ", peer=" << inet_ntoa(peer_addr.addr.sin_addr) << ":" << ntohs(peer_addr.addr.sin_port)
+             << ", local=" << inet_ntoa(local_addr.addr.sin_addr) << ":" << ntohs(local_addr.addr.sin_port);
     if (newConnectionCallback)
         newConnectionCallback(clnt_fd, local_addr, peer_addr);
 }

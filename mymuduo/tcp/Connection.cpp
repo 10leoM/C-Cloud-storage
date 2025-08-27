@@ -25,7 +25,7 @@ Connection::~Connection()
 {
     // close(fd); // 关闭文件描述符
     // 注意：deleteConnectionCallback不需要在这里调用，因为它是一个回调函数
-    printf("Connection destructor called, fd: %d\n", fd);
+    LOG_INFO << "Connection destructor called, fd: " << fd << ", conn_id: " << conn_id;
     close(fd);
 }
 
@@ -117,7 +117,7 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
         }
         else
         {
-            LOG_ERROR << "TcpConnection::Send - TcpConnection Send ERROR";
+            LOG_ERROR << "Connection::Send - Connection Send ERROR";
             return;
         }
     }
@@ -126,7 +126,7 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
     if (remaining > 0)
     {
         sendBuffer->Append(msg + send_size, remaining);
-    if (highWaterMarkCallback && sendBuffer->GetReadablebytes() >= static_cast<size_t>(highWaterMark_))
+        if (highWaterMarkCallback && sendBuffer->GetReadablebytes() >= static_cast<size_t>(highWaterMark_))
         {   
             // 如果设置了高水位回调，并且当前发送缓冲区的大小超过了高水位，则调用回调函数
             // 这里的sendBuffer->GetReadablebytes()是获取当前可读字节数
@@ -138,7 +138,9 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
         // 1. 还没有监听写事件，在此时进行了监听
         // 2. 监听了写事件，并且已经触发了，此时再次监听，强制触发一次，如果强制触发失败，仍然可以等待后续TCP缓冲区可写。
         if (!channel->isWriting())
+        {    
             channel->enableWriting(true);
+        }
     }
     else
     {
@@ -153,7 +155,7 @@ void Connection::SendFile(int filefd, int size) // 发送文件
 {
     size_t send_size = 0;
     size_t data_size = static_cast<size_t>(size);
-    std::cout<< "Connection::SendFile, filefd: " << filefd << ", size: " << data_size << std::endl;
+    // std::cout<< "Connection::SendFile, filefd: " << filefd << ", size: " << data_size << std::endl;
     // 一次性把文件写完，虽然肯定不行。
     while (send_size < data_size)
     {
@@ -210,17 +212,17 @@ void Connection::ReadNonBlocking() // 非阻塞读取数据
         int savedErrno = 0;
         ssize_t n = readBuffer->readFd(fd, &savedErrno);
         if (n > 0) {
-            // 增量解析 CRLF（行结束），暂不取走数据，只是扫描到末尾位置，便于后续上层（如 HTTP）直接使用缓冲区内容。
-            const char *searchStart = readBuffer->Peek();
-            while (true) {
-                const char *crlf = readBuffer->findCRLF(searchStart);
-                if (!crlf) break;
-                // 可在需要时将行内容交给上层，这里仅扫描；避免提前 Retrieve 破坏现有 onMessage 语义
-                searchStart = crlf + 2; // 跳过 "\r\n" 继续查找下一行
-            }
-            continue; // 继续尝试读取，直到耗尽
+            // // 增量解析 CRLF（行结束），暂不取走数据，只是扫描到末尾位置，便于后续上层（如 HTTP）直接使用缓冲区内容。
+            // const char *searchStart = readBuffer->Peek();
+            // while (true) {
+            //     const char *crlf = readBuffer->findCRLF(searchStart);
+            //     if (!crlf) break;
+            //     // 可在需要时将行内容交给上层，这里仅扫描；避免提前 Retrieve 破坏现有 onMessage 语义
+            //     searchStart = crlf + 2; // 跳过 "\r\n" 继续查找下一行
+            // }
+            // continue; // 继续尝试读取，直到耗尽
         } else if (n == 0) { // EOF
-            printf("EOF, client fd %d disconnected\n", fd);
+            LOG_INFO << "EOF, client fd " << fd << " disconnected";
             HandleClose();
             break;
         } else { // n < 0
@@ -231,7 +233,7 @@ void Connection::ReadNonBlocking() // 非阻塞读取数据
                 // 本轮数据读完
                 break;
             }
-            printf("Read error(%d) on client fd %d\n", savedErrno, fd);
+            LOG_ERROR << "Connection::ReadNonBlocking - read error, fd: " << fd << ", errno: " << savedErrno;
             HandleClose();
             break;
         }
@@ -249,7 +251,7 @@ void Connection::WriteNonBlocking() // 非阻塞写入数据
         {
             return; // 等待下次可写
         }
-        LOG_ERROR << "TcpConnection::Send - TcpConnection Send ERROR";
+        LOG_ERROR << "Connection::Send - Connection Send ERROR";
         return;
     }
     if (send_size > 0)
@@ -288,7 +290,7 @@ void Connection::HandleError()
     socklen_t len = sizeof(err);
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0)
         err = errno;
-    LOG_ERROR << "TcpConnection error fd=" << fd << " err=" << err;
+    LOG_ERROR << "Connection error fd=" << fd << " err=" << strerror(err);
     if (errorCallback)
         errorCallback(shared_from_this());
 }
@@ -319,7 +321,7 @@ EventLoop *Connection::GetLoop() // 获取事件循环
     return loop;
 }
 
-void Connection::shutdown()
+void Connection::shutdown() 
 {
     if (state == connectionState::Connected)
     {
@@ -359,7 +361,15 @@ void Connection::HandleWrite() // 处理写事件
     Write();
 }
 
-void Connection::setContext(const std::shared_ptr<void> &ctx) { context = ctx;}
+void Connection::SetContext(const std::shared_ptr<HttpContext> &ctx)
+{
+    context = ctx;
+}
+
+std::shared_ptr<HttpContext> Connection::GetContext()
+{
+    return context;
+}
 
 TimeStamp Connection::GetTimeStamp() const // 获取最近一次活跃的时间戳
 {

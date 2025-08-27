@@ -85,14 +85,14 @@ std::string HttpResponse::GetBeforeBody()
         message += "Connection: Keep-Alive\r\n";
     }
 
-    // Range 处理：若指定区间覆盖则输出 Content-Range 并调整 Content-Length/状态码
-    if (has_range_) {
-        if (status_code_ == HttpStatusCode::OK) status_code_ = static_cast<HttpStatusCode>(206); // Partial Content
-        std::string cr = "bytes " + std::to_string(range_start_) + "-" + std::to_string(range_end_);
-        if (total_length_ >= 0) cr += "/" + std::to_string(total_length_); else cr += "/*";
-        headers_["Content-Range"] = cr;
-        content_length_ = static_cast<int>(range_end_ - range_start_ + 1);
-    }
+    // // Range 处理：若指定区间覆盖则输出 Content-Range 并调整 Content-Length/状态码
+    // if (has_range_) {
+    //     if (status_code_ == HttpStatusCode::OK) status_code_ = static_cast<HttpStatusCode>(206); // Partial Content
+    //     std::string cr = "bytes " + std::to_string(range_start_) + "-" + std::to_string(range_end_);
+    //     if (total_length_ >= 0) cr += "/" + std::to_string(total_length_); else cr += "/*";
+    //     headers_["Content-Range"] = cr;
+    //     content_length_ = static_cast<int>(range_end_ - range_start_ + 1);
+    // }
     for(auto &header : headers_) message += header.first + ": " + header.second + "\r\n";
     message += "\r\n";
 

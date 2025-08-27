@@ -16,6 +16,7 @@ FileUploadContext::FileUploadContext(const std::string &filename, const std::str
     {
         LOG_ERROR<<"Failed to open file: " << filename_ << " for writing";
     }
+    LOG_INFO << "Creating file: " << filename << ", original name: " << originalFilename;
 }
 
 FileUploadContext::~FileUploadContext()

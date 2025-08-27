@@ -64,6 +64,7 @@ class HttpContext
 private:
     std::shared_ptr<HttpRequest> request_; // 请求对象
     HttpRequestParseState state_;          // 当前解析状态
+    std::shared_ptr<void> context_;        // 自定义上下文
 
     // 异步场景: 业务回调返回 false 表示暂不发送响应，将 HttpResponse 临时保存
     std::unique_ptr<HttpResponse> deferred_response_;
@@ -104,6 +105,12 @@ public:
     bool GetCompleteRequest();                      // 获取完整请求
     HttpRequest *GetRequest();                      // 获取请求对象
     void ResetContextStatus();                      // 重置上下文状态
+
+    // 自定义上下文管理
+    template<typename T>
+    std::shared_ptr<T> GetContext() { return std::static_pointer_cast<T>(context_); }
+    template<typename T>
+    void SetContext(std::shared_ptr<T> ctx) { context_ = ctx; }
 
     // 异步响应管理
     void StoreDeferredResponse(const HttpResponse &resp); // 保存一份待发送响应

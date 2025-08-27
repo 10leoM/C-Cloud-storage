@@ -19,8 +19,10 @@ bool StaticHandler::handleIndex(const std::shared_ptr<Connection> &conn, HttpReq
     std::string filePath;
     if (path == "/")
         filePath = staticDir + "/index.html";
+    else if(path.find("/share/" == 0 || path == "/share.html"))
+        filePath = staticDir + "/share.html";
     else
-        filePath = staticDir + path;
+        filePath = staticDir + "/index.html";
 
     std::ifstream file(filePath); // 打开静态文件
     if (!file.is_open())

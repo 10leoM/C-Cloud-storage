@@ -18,10 +18,10 @@ bool DemoCallback(const std::shared_ptr<Connection>& conn, const HttpRequest &re
         resp->SetContentType("text/plain");
         resp->SetContentLength(0); // 暂不发送 body
         // 保存 deferred response
-        auto ctx = conn->getContext<HttpContext>();
+        auto ctx = conn->GetContext();
         if (!ctx) {
             auto newCtx = std::make_shared<HttpContext>();
-            conn->setContext(newCtx);
+            conn->SetContext(newCtx);
             ctx = newCtx;
         }
         ctx->StoreDeferredResponse(*resp);
@@ -30,7 +30,7 @@ bool DemoCallback(const std::shared_ptr<Connection>& conn, const HttpRequest &re
         std::weak_ptr<Connection> weak = conn;
         loop->RunAfter(0.1, [weak]() {
             if (auto c = weak.lock()) {
-                auto ctx = c->getContext<HttpContext>();
+                auto ctx = c->GetContext();
                 if (ctx && ctx->HasDeferredResponse()) {
                     HttpResponse* r = ctx->GetDeferredResponse();
                     std::string body = "async result\n";

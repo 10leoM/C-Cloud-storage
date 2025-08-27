@@ -66,6 +66,17 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "filesystem": "cpp",
+        "valarray": "cpp",
+        "cassert": "cpp",
+        "cerrno": "cpp",
+        "cfloat": "cpp",
+        "climits": "cpp",
+        "forward_list": "cpp",
+        "ciso646": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "version": "cpp"
     }
 }

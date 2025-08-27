@@ -56,10 +56,9 @@ inline void sendJson(HttpResponse* resp, json &body, const std::shared_ptr<Conne
     resp->SetStatusCode(code);
     resp->SetStatusMessage(code==HttpStatusCode::OK?"OK":"Internal Server Error");
     resp->SetContentType("application/json");
-    const std::string s = body.dump();
-    resp->SetBody(s);
+    resp->SetBody(body.dump());
     resp->SetBodyType(HTML_TYPE);
-    resp->SetContentLength(static_cast<int>(s.size()));
+    resp->SetContentLength(static_cast<int>(body.dump().size()));
     // 是否关闭连接由上层根据请求头决定；为兼容前端 fetch，这里也可选择保持连接
     // 不强制添加 Connection: close 头，交由 HttpServer 根据 close_flag 决定
     if (conn) conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});

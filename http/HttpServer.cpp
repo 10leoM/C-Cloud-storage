@@ -10,20 +10,9 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <fstream>
-#include "StaticFileHandler.h"
 
 bool HttpServer::HttpDefaultCallBack(const std::shared_ptr<Connection> &conn, const HttpRequest &request, HttpResponse *resp)
 {
-    // 简易静态文件: /static/... 或根路径
-    if (request.GetMethod() == HttpMethod::kGet || request.GetMethod() == HttpMethod::kHead) {
-        if (StaticFileHandler::Handle("./files", request, resp)) {
-            if (request.GetMethod() == HttpMethod::kHead && resp->GetBodyType() == HTML_TYPE) {
-                // HEAD 对文件：不发送 body，已在外层处理
-                resp->SetBody("");
-            }
-            return true;
-        }
-    }
     resp->SetStatusCode(HttpStatusCode::NotFound);
     resp->SetStatusMessage("Not Found");
     resp->SetCloseConnection(true);
@@ -63,11 +52,11 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
 {
     if (conn->GetState() == connectionState::Connected)
     {
-        auto context = conn->getContext<HttpContext>();
+        auto context = conn->GetContext();
         if (!context)
         {
             context = std::make_shared<HttpContext>();
-            conn->setContext(context);
+            conn->SetContext(context);
         }
         // 支持 HTTP pipelining: 循环解析缓冲中的多个请求
         while (true) {
@@ -79,6 +68,26 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
                     return;
                 }
                 if (consumed) conn->GetReadBuffer()->Retrieve(consumed);
+
+                // 参考 WebMem: 头部完成但请求体未接收完，且达到阈值则先落盘（调用业务回调处理分片）
+                if (context->HeadersComplete() && !context->BodyComplete()) {
+                    HttpRequest *req = context->GetRequest();
+                    // 仅对上传接口执行分片回调，避免影响其他 POST
+                    if (req && req->GetMethod() == HttpMethod::kPost && req->GetUrl() == "/upload") {
+                        static const size_t kChunkThreshold = 1 * 1024 * 1024; // 1MB
+                        size_t buffered = req->GetBody().size();
+                        if (buffered >= kChunkThreshold) {
+                            HttpResponse tmpResp(false); // 不关闭连接
+                            bool syncProcessed = responseCallback_(conn, *req, &tmpResp);
+                            if (!syncProcessed) {
+                                // 异步/增量处理：业务可能已清空 req->body() 并持久化，等待更多数据
+                                // 让出本次 onMessage，后续数据到来再继续
+                                return;
+                            }
+                            // 若同步处理完成，继续循环，等待更多数据或完整请求
+                        }
+                    }
+                }
             }
             if (context->GetCompleteRequest()) 
             {
@@ -101,40 +110,40 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
     std::string connection_state = request.GetHeader("Connection");
     bool Close = (connection_state == "close" || (request.GetVersion() == HttpVersion::kHttp10 && connection_state != "keep-alive")); // 是否关闭连接
 
-    // 处理文件上传的请求
-    if (request.GetHeader("Content-Type").find("multipart/form-data") != std::string::npos)
-    {
-        // 对文件进行处理
-        // 先找到文件名，一般第一个filename位置应该就是文件名的所在地。
-        // 从content-type中找到边界
-        size_t boundary_index = request.GetHeader("Content-Type").find("boundary");
-        std::string boundary = request.GetHeader("Content-Type").substr(boundary_index + std::string("boundary=").size());
+    // // 处理文件上传的请求
+    // if (request.GetHeader("Content-Type").find("multipart/form-data") != std::string::npos)
+    // {
+    //     // 对文件进行处理
+    //     // 先找到文件名，一般第一个filename位置应该就是文件名的所在地。
+    //     // 从content-type中找到边界
+    //     size_t boundary_index = request.GetHeader("Content-Type").find("boundary");
+    //     std::string boundary = request.GetHeader("Content-Type").substr(boundary_index + std::string("boundary=").size());
 
-        std::string filemessage = request.GetBody();
-        size_t begin_index = filemessage.find("filename");
-        if(begin_index == std::string::npos ){
-            LOG_ERROR << "cant find filename";
-            return;
-        }
-        begin_index += std::string("filename=\"").size();
-        size_t end_index = filemessage.find("\"\r\n", begin_index); // 能用
+    //     std::string filemessage = request.GetBody();
+    //     size_t begin_index = filemessage.find("filename");
+    //     if(begin_index == std::string::npos ){
+    //         LOG_ERROR << "cant find filename";
+    //         return;
+    //     }
+    //     begin_index += std::string("filename=\"").size();
+    //     size_t end_index = filemessage.find("\"\r\n", begin_index); // 能用
 
-        std::string filename = filemessage.substr(begin_index, end_index - begin_index);
+    //     std::string filename = filemessage.substr(begin_index, end_index - begin_index);
 
-        // 对文件信息的处理
-        begin_index = filemessage.find("\r\n\r\n") + 4; //遇到空行，说明进入了文件体
-        end_index = filemessage.find(std::string("--") + boundary + "--"); // 对文件内容边界的搜寻
+    //     // 对文件信息的处理
+    //     begin_index = filemessage.find("\r\n\r\n") + 4; //遇到空行，说明进入了文件体
+    //     end_index = filemessage.find(std::string("--") + boundary + "--"); // 对文件内容边界的搜寻
 
-        std::string filedata = filemessage.substr(begin_index, end_index - begin_index);
-        // 写入文件
-        std::ofstream ofs("../../files/" + filename, std::ios::out | std::ios::app | std::ios::binary);
-        ofs.write(filedata.data(), filedata.size());
-        ofs.close();
-    }
+    //     std::string filedata = filemessage.substr(begin_index, end_index - begin_index);
+    //     // 写入文件
+    //     std::ofstream ofs("../../files/" + filename, std::ios::out | std::ios::app | std::ios::binary);
+    //     ofs.write(filedata.data(), filedata.size());
+    //     ofs.close();
+    // }
 
     HttpResponse response(Close);
     bool done = responseCallback_(conn, request, &response); // true 表示同步返回
-    auto context = conn->getContext<HttpContext>();
+    auto context = conn->GetContext();
     if (!done) 
     {
         // 异步: 保存响应对象, 业务稍后填充后调用 SendDeferredResponse
@@ -165,7 +174,7 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
 void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
 {
     if (!conn || conn->GetState() != connectionState::Connected) return;
-    auto context = conn->getContext<HttpContext>();
+    auto context = conn->GetContext();
     if (!context || !context->HasDeferredResponse()) return;
 
     HttpResponse *resp = context->GetDeferredResponse();

@@ -153,6 +153,28 @@ bool ShareHandler::handleShareAccess(const std::shared_ptr<Connection> &conn, Ht
     }
     else    // 浏览器访问
     {
+        // 浏览器访问时也需要验证分享码基本格式
+        if (shareCode.empty() || shareCode.length() != 32)
+        {
+            sendError(resp, "无效的分享链接", HttpStatusCode::BadRequest, conn);
+            return true;
+        }
+        if (!std::all_of(shareCode.begin(), shareCode.end(), [](char c)
+                         { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'); }))
+        {
+            sendError(resp, "分享码包含非法字符", HttpStatusCode::BadRequest, conn);
+            return true;
+        }
+        
+        // 验证分享码是否存在
+        auto recOpt = sharesRepo_.getByCode(shareCode);
+        if (!recOpt)
+        {
+            sendError(resp, "分享链接已失效或不存在", HttpStatusCode::NotFound, conn);
+            return true;
+        }
+        
+        // 分享码有效，返回前端页面
         bool result = staticHandler_.handleIndex(conn, req, resp);
         resp->AddHeader("X-Share-Code", shareCode);
         return result;
@@ -167,8 +189,8 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         sendError(resp, "Missing filename", HttpStatusCode::BadRequest, conn);
         return true;
     }
-    std::string shareCode = req.GetPathParam("code");
-    std::string extractCode = req.GetPathParam("extract_code");
+    std::string shareCode = req.GetQueryValue("code");
+    std::string extractCode = req.GetQueryValue("extract_code");
     if(shareCode.empty() || shareCode.length() != 32)
     {
         sendError(resp, "无效的分享码格式", HttpStatusCode::BadRequest, conn);
@@ -229,7 +251,7 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         resp->SetStatusCode(HttpStatusCode::OK);
         resp->SetStatusMessage("OK");
         resp->SetContentType("application/octet-stream");
-        resp->AddHeader("Content-Length", std::to_string(fileSize));
+        resp->SetContentLength(fileSize);
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "close");
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
@@ -242,17 +264,17 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         sendError(resp, "Range Not Satisfiable", HttpStatusCode::RangeNotSatisfiable, conn);
         return true;
     }
-    auto httpContext = conn->getContext<HttpContext>();
+    auto httpContext = conn->GetContext();
     if (!httpContext)
     {
         sendError(resp, "Internal Server Error", HttpStatusCode::InternalServerError, conn);
         return true;
     }
-    std::shared_ptr<FileDownContext> downContext = conn->getContext<FileDownContext>();
+    std::shared_ptr<FileDownContext> downContext = httpContext->GetContext<FileDownContext>();
     if (!downContext)
     {
         downContext = std::make_shared<FileDownContext>(filepath, rec.originalFilename);
-        conn->setContext(httpContext);
+        httpContext->SetContext(downContext);
         if (rs.isRange)
         {
             resp->SetStatusCode(HttpStatusCode::PartialContent);
@@ -265,6 +287,8 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
             resp->SetStatusMessage("OK");
         }
         resp->SetContentType("application/octet-stream");
+        resp->SetBodyType(HTML_TYPE);
+        resp->SetContentLength(fileSize);
         resp->AddHeader("Content-Disposition", "attachment; filename=\"" + rec.originalFilename + "\"");
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "keep-alive");
@@ -283,7 +307,7 @@ bool ShareHandler::handleShareInfo(const std::shared_ptr<Connection> &conn, Http
         sendError(resp, "Missing share code", HttpStatusCode::BadRequest, conn);
         return true;
     }
-    std::string extractCode = req.GetPathParam("extract_code");
+    std::string extractCode = req.GetQueryValue("extract_code");
     auto recOpt = sharesRepo_.getByCode(shareCode);
     if (!recOpt)
     {

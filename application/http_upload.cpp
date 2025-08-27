@@ -107,17 +107,17 @@ public:
         {
             LOG_INFO << "New connection from " << conn->GetpeerIpPort();
             // 为每个新连接创建一个 HttpContext
-            conn->setContext(std::make_shared<HttpContext>());
+            conn->SetContext(std::make_shared<HttpContext>());
         }
         else
         {
             LOG_INFO << "Connection closed from " << conn->GetpeerIpPort();
             // 清理上下文
-            if (auto context = conn->getContext<FileUploadContext>())
+            if (auto context = conn->GetContext()->GetContext<FileUploadContext>())
             {
                     LOG_INFO << "Cleaning up upload context for file: " << context->getFilename();
             }
-            conn->setContext(std::shared_ptr<void>());
+            conn->SetContext(std::shared_ptr<HttpContext>());
         }
     }
 

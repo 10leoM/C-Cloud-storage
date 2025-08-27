@@ -47,8 +47,7 @@ private:
     std::function<void(const std::shared_ptr<Connection> &, size_t)> highWaterMarkCallback; // 高水位
     size_t highWaterMark_ = 64 * 1024;                                                      // 默认 64KB
 
-    // 协议无关的通用context
-    std::shared_ptr<void> context;
+    std::shared_ptr<HttpContext> context;
 
     void ReadNonBlocking();  // 非阻塞读取数据F
     void WriteNonBlocking(); // 非阻塞写入数据
@@ -95,9 +94,8 @@ public:
     Buffer *GetSendBuffer(); // 获取发送缓冲区
     EventLoop *GetLoop();    // 获取事件循环
 
-    template <typename T>
-    std::shared_ptr<T> getContext() const { return std::static_pointer_cast<T>(context); }
-    void setContext(const std::shared_ptr<void> &ctx);
+    void SetContext(const std::shared_ptr<HttpContext> &ctx); 
+    std::shared_ptr<HttpContext> GetContext();
 
     TimeStamp GetTimeStamp() const;            // 获取最近一次活跃的时间戳
     void UpdateTimeStamp(const TimeStamp &ts); // 更新最近一次活跃的时间戳

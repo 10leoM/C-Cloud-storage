@@ -35,15 +35,23 @@ void Server::NewConnection(int fd, const InetAddress& local, const InetAddress& 
 {
     EventLoop *sub_loop = threadPool->nextloop();                                 // 获取对应的子Reactor
     connections[fd] = std::make_shared<Connection>(sub_loop, fd, next_conn_id++, local, peer); // 创建新的连接对象，保存地址
-    connections[fd]->setDeleteConnectionCallback(
-        std::bind(&Server::DeleteConnection, this, std::placeholders::_1)); // 设置删除连接的回调函数
-    connections[fd]->setOnMessageCallback(messageCallback);                 // 设置连接建立的回调函数
-    connections[fd]->setOnConnectionCallback(onConnectionCallback);         // 打印连接信息 
-    if (closeCallback) connections[fd]->setCloseCallback(closeCallback);
-    if (errorCallback) connections[fd]->setErrorCallback(errorCallback);
-    if (writeCompleteCallback) connections[fd]->setWriteCompleteCallback(writeCompleteCallback);
-    if (highWaterMarkCallback) connections[fd]->setHighWaterMarkCallback(highWaterMarkCallback, highWaterMark_);
-    connections[fd]->ConnectionEstablished();                               // 连接建立，注册事件
+    
+    // 确保连接的所有操作都在其专属的EventLoop线程中执行
+    sub_loop->runOneFunc([this, fd]() {
+        auto conn = connections[fd];
+        if (conn) {
+            conn->setDeleteConnectionCallback(
+                std::bind(&Server::DeleteConnection, this, std::placeholders::_1)); // 设置删除连接的回调函数
+            conn->setOnMessageCallback(messageCallback);                 // 设置连接建立的回调函数
+            conn->setOnConnectionCallback(onConnectionCallback);         // 打印连接信息 
+            if (closeCallback) conn->setCloseCallback(closeCallback);
+            if (errorCallback) conn->setErrorCallback(errorCallback);
+            if (writeCompleteCallback) conn->setWriteCompleteCallback(writeCompleteCallback);
+            if (highWaterMarkCallback) conn->setHighWaterMarkCallback(highWaterMarkCallback, highWaterMark_);
+            conn->ConnectionEstablished();                               // 连接建立，注册事件
+        }
+    });
+    
     // printf("创建，计数：%d\n", connections[fd].use_count());
     if (next_conn_id == 1000) // 防止连接ID溢出
         next_conn_id = 1;     // 重置连接ID

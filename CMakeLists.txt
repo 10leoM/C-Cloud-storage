@@ -25,9 +25,22 @@ foreach(source_file ${main_sources})
     get_filename_component(file_name ${source_file} NAME_WE)    # 获取文件名（不含路径和扩展名）
     add_executable(${file_name} ${source_file})                 # 添加可执行文件
     target_link_libraries(${file_name} pine_shared)             # 链接 pine_shared 动态库
-    target_include_directories(${file_name} PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径
+    target_include_directories(${file_name} PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/include_external_msproject()) # 添加头文件路径
     set_target_properties(${file_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test/bin)
-    
 endforeach(source_file ${main_sources})
+
+# 生成 http_upload 可执行文件
+file(GLOB_RECURSE http_upload_sources ${PROJECT_SOURCE_DIR}/application/*.cpp, ${PROJECT_SOURCE_DIR}/application/src/*.cpp)
+file(GLOB_RECURSE http_upload_sources
+    ${PROJECT_SOURCE_DIR}/application/*.cpp
+    ${PROJECT_SOURCE_DIR}/application/src/*.cpp
+)
+set(http_upload_include ${PROJECT_SOURCE_DIR}/application/inc ${PROJECT_SOURCE_DIR}/application/src/inc)
+include_directories(${http_upload_include})
+add_executable(http_upload ${http_upload_sources})
+# 需要 MySQL C API 和 experimental::filesystem
+target_link_libraries(http_upload pine_shared mysqlclient stdc++fs)
+target_include_directories(http_upload PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径
+set_target_properties(http_upload PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/application/bin)
 
 # 设置安装路径

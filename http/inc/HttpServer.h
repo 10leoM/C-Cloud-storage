@@ -9,7 +9,7 @@
 #include "RouterTrie.h"
 
 // 自动关闭的时间，以秒为单位
-#define AUTOCLOSETIMEOUT 2
+#define AUTOCLOSETIMEOUT 100
 
 
 class Server;

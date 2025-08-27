@@ -206,7 +206,7 @@ bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consume
     if (headers_complete_ && !body_complete_) {
         size_t bodyConsumed = 0;
         size_t remain = len - consumedBytes;
-        if (!chunked_ && content_length_ > limits_.max_body_bytes) { state_ = HttpRequestParseState::INVALID; return false; }
+        // if (!chunked_ && content_length_ > limits_.max_body_bytes) { state_ = HttpRequestParseState::INVALID; return false; }
         if (chunked_) {
             if (!ParseChunkedBlock(data + consumedBytes, remain, bodyConsumed)) return false;
         } else if (content_length_ > 0) {
