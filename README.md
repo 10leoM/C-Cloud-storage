@@ -22,7 +22,12 @@
 
 ## 目录结构（节选）
 
-- `mymuduo/tcp/`：Reactor、EventLoop、Epoll、Channel、Connection 等
+- `mymuduo`：重构的muduo网络库
+  - `mymuduo/tcp/`：Reactor、EventLoop、Epoll、Channel、Connection 等
+  - `mymuduo/log/`：日志类
+  - `mymuduo/timer/`：定时器类
+  - `mymuduo/base/`：包装一些通用工具，如线程ID获取
+  - `mymuduo/router/`：字典树实现的路由
 - `http/`：HTTP 协议解析与服务器封装
 - `application/src/`：业务处理器
   - `StaticHandler` 静态页
