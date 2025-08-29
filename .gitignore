@@ -1,0 +1,23 @@
+# Ignore build outputs and large runtime/upload artifacts
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Binaries
+/application/bin/
+
+# Uploads and runtime data
+uploads/
+application/uploads/
+application/bin/uploads/
+logs/
+application/logs/
+*.log
+
+# OS/editor
+.DS_Store
+*.swp
+*.swo
+.vscode/
