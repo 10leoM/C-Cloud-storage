@@ -223,7 +223,7 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "close");
         conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c)
-                                       { c->shutdown(); return true; });
+                                       { c->HandleClose(); return true; });
         return true;
     }
 
@@ -270,7 +270,7 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
                                    {
         std::string chunk; 
         if (downContext->readNextChunk(chunk)) { c->Send(chunk); return true; }
-        c->shutdown(); 
+        c->HandleClose(); 
         return true; });
 
     return true;

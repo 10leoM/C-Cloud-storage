@@ -254,7 +254,7 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         resp->SetContentLength(fileSize);
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "close");
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
+        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->HandleClose(); return true; });
         return true;
     }
     // 处理 Range 请求
@@ -295,7 +295,7 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         downContext->seekTo(rs.isRange ? rs.start : 0);
     }
     conn->setWriteCompleteCallback([downContext](const std::shared_ptr<Connection> &c)
-                                   { std::string chunk; if (downContext->readNextChunk(chunk)) { c->Send(chunk); return true; } c->shutdown(); return true; });
+                                   { std::string chunk; if (downContext->readNextChunk(chunk)) { c->Send(chunk); return true; } c->HandleClose(); return true; });
     return true;
 }
 

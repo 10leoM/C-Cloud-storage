@@ -32,16 +32,16 @@ bool StaticHandler::handleIndex(const std::shared_ptr<Connection> &conn, HttpReq
         resp->SetContentType("text/html; charset=utf-8");
         resp->SetBody("<h1>404 Not Found</h1>");
         if (conn)
-            conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
+            conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->HandleClose(); return true; });
         return true;
     }
     std::string html((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    resp->SetCloseConnection(true);
+    // resp->SetCloseConnection(true);
     resp->SetBody(html);
     resp->SetContentLength(html.size());
-    if (conn)
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c)
-                                       { c->shutdown(); return true; });
+    // if (conn)
+    //     conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c)
+    //                                    { c->HandleClose(); return true; });
     return true;
 }
 
@@ -68,10 +68,10 @@ bool StaticHandler::handleFavicon(const std::shared_ptr<Connection> &conn, HttpR
         resp->SetContentType("image/x-icon");
         resp->SetBody(iconData);
         resp->SetContentLength(iconData.size());
-        resp->SetCloseConnection(true);
+        // resp->SetCloseConnection(true);
     }
-    if (conn)
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->shutdown(); return true; });
+    // if (conn)
+    //     conn->setWriteCompleteCallback([](const std::shared_ptr<Connection> &c){ c->HandleClose(); return true; });
     return true;
 }
 
@@ -84,7 +84,7 @@ bool StaticHandler::handleStaticAsset(const std::shared_ptr<Connection> &conn, H
         resp->SetStatusMessage("Not Found");
         resp->AddHeader("Connection","close");
         resp->SetBody("");
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
+        // conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});
         return true;
     }
     std::string currentDir = __FILE__;
@@ -98,7 +98,7 @@ bool StaticHandler::handleStaticAsset(const std::shared_ptr<Connection> &conn, H
         resp->SetStatusMessage("Forbidden");
         resp->AddHeader("Connection","close");
         resp->SetBody("");
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
+        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});
         return true;
     }
     std::string filePath = staticDir + "/" + rel;
@@ -108,7 +108,7 @@ bool StaticHandler::handleStaticAsset(const std::shared_ptr<Connection> &conn, H
         resp->SetStatusMessage("Not Found");
         resp->AddHeader("Connection","close");
         resp->SetBody("");
-        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
+        conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});
         return true;
     }
     // 简单的内容类型映射
@@ -136,8 +136,8 @@ bool StaticHandler::handleStaticAsset(const std::shared_ptr<Connection> &conn, H
     resp->SetStatusMessage("OK");
     resp->SetContentType(ct);
     resp->SetContentLength(data.size());
-    resp->SetCloseConnection(true);
+    // resp->SetCloseConnection(true);
     resp->SetBody(data);
-    conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->shutdown(); return true;});
+    // conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});
     return true;
 }

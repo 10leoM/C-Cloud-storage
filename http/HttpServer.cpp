@@ -69,7 +69,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
                 }
                 if (consumed) conn->GetReadBuffer()->Retrieve(consumed);
 
-                // 参考 WebMem: 头部完成但请求体未接收完，且达到阈值则先落盘（调用业务回调处理分片）
+                // 头部完成但请求体未接收完，且达到阈值则先落盘（调用业务回调处理分片）
                 if (context->HeadersComplete() && !context->BodyComplete()) {
                     HttpRequest *req = context->GetRequest();
                     // 仅对上传接口执行分片回调，避免影响其他 POST
@@ -110,37 +110,6 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
     std::string connection_state = request.GetHeader("Connection");
     bool Close = (connection_state == "close" || (request.GetVersion() == HttpVersion::kHttp10 && connection_state != "keep-alive")); // 是否关闭连接
 
-    // // 处理文件上传的请求
-    // if (request.GetHeader("Content-Type").find("multipart/form-data") != std::string::npos)
-    // {
-    //     // 对文件进行处理
-    //     // 先找到文件名，一般第一个filename位置应该就是文件名的所在地。
-    //     // 从content-type中找到边界
-    //     size_t boundary_index = request.GetHeader("Content-Type").find("boundary");
-    //     std::string boundary = request.GetHeader("Content-Type").substr(boundary_index + std::string("boundary=").size());
-
-    //     std::string filemessage = request.GetBody();
-    //     size_t begin_index = filemessage.find("filename");
-    //     if(begin_index == std::string::npos ){
-    //         LOG_ERROR << "cant find filename";
-    //         return;
-    //     }
-    //     begin_index += std::string("filename=\"").size();
-    //     size_t end_index = filemessage.find("\"\r\n", begin_index); // 能用
-
-    //     std::string filename = filemessage.substr(begin_index, end_index - begin_index);
-
-    //     // 对文件信息的处理
-    //     begin_index = filemessage.find("\r\n\r\n") + 4; //遇到空行，说明进入了文件体
-    //     end_index = filemessage.find(std::string("--") + boundary + "--"); // 对文件内容边界的搜寻
-
-    //     std::string filedata = filemessage.substr(begin_index, end_index - begin_index);
-    //     // 写入文件
-    //     std::ofstream ofs("../../files/" + filename, std::ios::out | std::ios::app | std::ios::binary);
-    //     ofs.write(filedata.data(), filedata.size());
-    //     ofs.close();
-    // }
-
     HttpResponse response(Close);
     bool done = responseCallback_(conn, request, &response); // true 表示同步返回
     auto context = conn->GetContext();
@@ -168,7 +137,7 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
         int ret = close(response.GetFileFd());
         if (ret < 0) LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
     }
-    if (response.IsCloseConnection()) conn->HandleClose();
+    if (response.IsCloseConnection()) conn->shutdown();
 }
 
 void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
