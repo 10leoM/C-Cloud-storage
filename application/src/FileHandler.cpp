@@ -22,10 +22,9 @@ FileHandler::FileHandler(Db &db, AuthHandler &auth, FilenameMap &fmap, const std
 
 bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId;
     std::string username;
-    if (!auth_.validateSession(sessionId, userId, username))
+    if (!auth_.ensureAuth(req, userId, username))
     {
         sendError(resp, "未登录或会话已过期", HttpStatusCode::Unauthorized, conn);
         return true;
@@ -80,10 +79,9 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
 
 bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId;
     std::string username;
-    if (!auth_.validateSession(sessionId, userId, username))
+    if (!auth_.ensureAuth(req, userId, username))
     {
         sendError(resp, "未登录或会话已过期", HttpStatusCode::Unauthorized, conn);
         return true;
@@ -129,12 +127,9 @@ bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequ
 bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
     // 获取SessionID，用户信息
-    std::string sessionId = req.GetHeader("X-Session-ID");
-    if (sessionId.empty())
-        sessionId = req.GetQueryValue("sessionId");
     int userId = 0;
     std::string username;
-    bool isAuthenticated = auth_.validateSession(sessionId, userId, username);
+    bool isAuthenticated = auth_.ensureAuth(req, userId, username);
 
     // 获取文件名
     std::string filename = req.GetPathParam("filename");
@@ -279,10 +274,9 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
 bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
     // 验证用户身份
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId;
     std::string username;
-    if (!auth_.validateSession(sessionId, userId, username))
+    if (!auth_.ensureAuth(req, userId, username))
     {
         sendError(resp, "未登录或会话已过期", HttpStatusCode::Unauthorized, conn);
         return true;

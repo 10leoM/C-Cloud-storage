@@ -12,10 +12,9 @@ using json = nlohmann::json;
 
 bool ShareHandler::handleShareFile(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId;
     std::string username;
-    if (!auth_.validateSession(sessionId, userId, username))
+    if (!auth_.ensureAuth(req, userId, username))
     {
         sendError(resp, "未登录或会话已过期", HttpStatusCode::Unauthorized, conn);
         return true;
@@ -100,10 +99,9 @@ bool ShareHandler::handleShareAccess(const std::shared_ptr<Connection> &conn, Ht
 
     std::string shareCode = m[1];
     std::string accept = req.GetHeader("Accept"); // 判断是浏览器访问还是下载
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId = 0;
     std::string username;
-    bool isAuthed = auth_.validateSession(sessionId, userId, username);
+    bool isAuthed = auth_.ensureAuth(req, userId, username);
     // AJAX 或 Accept: application/json 视为 API 请求，返回 JSON
     if (req.GetHeader("X-Requested-With") == "XMLHttpRequest" || accept.find("application/json") != std::string::npos)
     {
@@ -197,10 +195,9 @@ bool ShareHandler::handleShareDownload(const std::shared_ptr<Connection> &conn, 
         return true;
     }
 
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId = 0;
     std::string username;
-    bool isAuthed = auth_.validateSession(sessionId, userId, username);
+    bool isAuthed = auth_.ensureAuth(req, userId, username);
     auto recOpt = sharesRepo_.getByCode(shareCode);
     if (!recOpt)
     {

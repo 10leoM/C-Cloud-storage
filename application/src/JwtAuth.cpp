@@ -8,22 +8,24 @@
 #define HAVE_JWT_CPP 0
 #endif
 
+using namespace std::chrono;
+
 JwtAuth::JwtAuth(std::string secret, int expireSeconds)
     : secret_(std::move(secret)), exp_(expireSeconds) {}
 
-std::string JwtAuth::issueToken(const JwtUser& u) const {
-    using namespace std::chrono;
+std::string JwtAuth::issueToken(const JwtUser &u) const
+{
 #if HAVE_JWT_CPP
     auto now = system_clock::now();
     auto exp = now + seconds(exp_);
     auto token = jwt::create()
-        .set_type("JWT")
-        .set_issued_at(now)
-        .set_expires_at(exp)
-        .set_payload_claim("uid", jwt::claim(std::to_string(u.userId)))
-        .set_payload_claim("name", jwt::claim(u.username))
-        .set_payload_claim("jti", jwt::claim(u.jti))
-        .sign(jwt::algorithm::hs256{secret_});
+                     .set_type("JWT")
+                     .set_issued_at(now)
+                     .set_expires_at(exp)
+                     .set_payload_claim("uid", jwt::claim(std::to_string(u.userId)))
+                     .set_payload_claim("name", jwt::claim(u.username))
+                     .set_payload_claim("jti", jwt::claim(u.jti))
+                     .sign(jwt::algorithm::hs256{secret_});
     return token;
 #else
     (void)u;
@@ -31,14 +33,16 @@ std::string JwtAuth::issueToken(const JwtUser& u) const {
 #endif
 }
 
-std::optional<JwtUser> JwtAuth::verifyToken(const std::string& token) const {
+std::optional<JwtUser> JwtAuth::verifyToken(const std::string &token) const
+{
     (void)token;
 #if HAVE_JWT_CPP
-    try {
+    try
+    {
         auto decoded = jwt::decode(token);
         auto verifier = jwt::verify()
-            .allow_algorithm(jwt::algorithm::hs256{secret_})
-            .leeway(5);
+                            .allow_algorithm(jwt::algorithm::hs256{secret_})
+                            .leeway(5);
         verifier.verify(decoded);
         JwtUser u{};
         if (decoded.has_payload_claim("uid"))
@@ -48,7 +52,9 @@ std::optional<JwtUser> JwtAuth::verifyToken(const std::string& token) const {
         if (decoded.has_payload_claim("jti"))
             u.jti = decoded.get_payload_claim("jti").as_string();
         return u;
-    } catch (...) {
+    }
+    catch (...)
+    {
         return std::nullopt;
     }
 #else

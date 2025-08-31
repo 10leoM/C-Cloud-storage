@@ -43,13 +43,44 @@ target_link_libraries(http_upload pine_shared mysqlclient stdc++fs)
 target_include_directories(http_upload PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径
 set_target_properties(http_upload PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/application/bin)
 
-# ---- Optional deps: jwt-cpp & redis-plus-plus ----
+# OpenSSL: 为 jwt-cpp 或其它使用到 EVP_* 的组件提供链接
+find_package(OpenSSL QUIET)
+if (OpenSSL_FOUND)
+    if (TARGET OpenSSL::Crypto)
+        target_link_libraries(http_upload OpenSSL::Crypto)
+    else()
+        target_link_libraries(http_upload crypto)
+    endif()
+    if (TARGET OpenSSL::SSL)
+        target_link_libraries(http_upload OpenSSL::SSL)
+    endif()
+else()
+    # 若未找到包，但系统存在 libcrypto，则尝试直接链接
+    find_library(SYS_CRYPTO_LIB crypto)
+    if(SYS_CRYPTO_LIB)
+        target_link_libraries(http_upload ${SYS_CRYPTO_LIB})
+    endif()
+endif()
+
+# ---- 依赖检查：JWT和Redis ----
 include(CheckIncludeFileCXX)
 check_include_file_cxx("jwt-cpp/jwt.h" HAVE_JWT_CPP)
 check_include_file_cxx("sw/redis++/redis++.h" HAVE_REDIS_PLUS_PLUS)
 
 if(HAVE_JWT_CPP)
     target_compile_definitions(http_upload PRIVATE HAVE_JWT_CPP=1)
+    # jwt-cpp 依赖 OpenSSL 的 libcrypto（以及可能的 libssl）
+    find_package(OpenSSL REQUIRED)
+    if (TARGET OpenSSL::Crypto)
+        target_link_libraries(http_upload OpenSSL::Crypto)
+    else()
+        target_link_libraries(http_upload crypto)
+    endif()
+    if (TARGET OpenSSL::SSL)
+        target_link_libraries(http_upload OpenSSL::SSL)
+    else()
+        # 一些场景仅需要 Crypto，这里做兜底
+    endif()
 endif()
 
 if(HAVE_REDIS_PLUS_PLUS)
@@ -71,6 +102,17 @@ if(HAVE_REDIS_PLUS_PLUS)
             if(HIREDIS_LIB)
                 target_link_libraries(http_upload ${HIREDIS_LIB})
             endif()
+        endif()
+    endif()
+    # 若未通过 pkg-config 找到，尝试手动查找
+    if(NOT REDIS_PLUS_PLUS_FOUND)
+        find_path(REDIS_PLUS_PLUS_INCLUDE_DIR sw/redis++/redis++.h)
+        find_library(REDIS_PLUS_PLUS_LIB NAMES redis++ redis++)
+        if(REDIS_PLUS_PLUS_INCLUDE_DIR)
+            target_include_directories(http_upload PRIVATE ${REDIS_PLUS_PLUS_INCLUDE_DIR})
+        endif()
+        if(REDIS_PLUS_PLUS_LIB)
+            target_link_libraries(http_upload ${REDIS_PLUS_PLUS_LIB})
         endif()
     endif()
 endif()

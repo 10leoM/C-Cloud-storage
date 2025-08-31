@@ -23,11 +23,11 @@ public:
     // 按用户名关键字搜索用户，排除指定用户ID，返回结果限制数量
     std::vector<UserRow> searchByUsernameKeywordExcluding(const std::string& keyword, int excludeUserId, int limit=10){
         std::vector<UserRow> out;
-        std::string q = "SELECT id, username, email, password FROM users WHERE username LIKE ''%" + db_.escape(keyword) + 
-                        "%' AND id != " + std::to_string(excludeUserId) + " LIMIT " + std::to_string(limit);
+    std::string q = "SELECT id, username, email, password FROM users WHERE username LIKE '%" + db_.escape(keyword) + 
+            "%' AND id != " + std::to_string(excludeUserId) + " LIMIT " + std::to_string(limit);
         if (MYSQL_RES* res = db_.query(q)) {
             MYSQL_ROW row;
-            while(row = mysql_fetch_row(res)) {
+        while((row = mysql_fetch_row(res))) {
                 UserRow u;
                 u.id = std::stoi(row[0]);
                 u.username = row[1] ? row[1] : "";

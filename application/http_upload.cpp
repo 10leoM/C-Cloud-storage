@@ -20,6 +20,8 @@
 #include "Connection.h"
 #include "HttpRequest.h"
 #include "HttpResponse.h"
+#include "JwtAuth.h"
+#include "RedisClient.h"
 #include "AsyncLogging.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -90,6 +92,34 @@ public:
 
         // 加载文件名映射
         filenameMap_.load();
+
+        // 注入 JWT（若提供了密钥）
+        const char* jwtSecret = ::getenv("JWT_SECRET");
+        const char* jwtExpStr = ::getenv("JWT_EXPIRE");
+        int jwtExp = jwtExpStr ? std::atoi(jwtExpStr) : 7*24*3600; // 默认 7 天
+        static std::unique_ptr<JwtAuth> s_jwt;
+        if (jwtSecret && *jwtSecret) {
+            s_jwt = std::make_unique<JwtAuth>(jwtSecret, jwtExp);
+            auth_.setJwt(s_jwt.get());
+            LOG_INFO << "JWT enabled with exp(s): " << jwtExp;
+        } else {
+            LOG_WARN << "JWT not enabled. Set JWT_SECRET to enable Bearer auth";
+        }
+
+        // 注入 Redis（若提供了 REDIS_URL，例如：tcp://127.0.0.1:6379?db=0）
+        const char* redisUrl = ::getenv("REDIS_URL");
+        static std::unique_ptr<RedisClient> s_redis;
+        if (redisUrl && *redisUrl) {
+            s_redis = std::make_unique<RedisClient>(redisUrl);
+            if (s_redis->get()) {
+                auth_.setRedis(s_redis->get());
+                LOG_INFO << "Redis enabled: " << redisUrl;
+            } else {
+                LOG_WARN << "Redis URL provided but client not available (headers or libs missing)";
+            }
+        } else {
+            LOG_WARN << "Redis not enabled. Set REDIS_URL to enable Redis cache";
+        }
 
         // 初始化路由表
         initRoutes();

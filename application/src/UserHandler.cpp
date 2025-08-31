@@ -8,10 +8,9 @@ using json = nlohmann::json;
 
 bool UserHandler::handleSearchUsers(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
-    std::string sessionId = req.GetHeader("X-Session-ID");
     int userId;
     std::string username;
-    if (!auth_.validateSession(sessionId, userId, username))
+    if (!auth_.ensureAuth(req, userId, username))
     {
         sendError(resp, "未登录或会话已过期", HttpStatusCode::Unauthorized, conn);
         LOG_WARN << "validateSession failed";

@@ -8,11 +8,15 @@
 #define HAVE_REDIS_PLUS_PLUS 0
 #endif
 
-RedisClient::RedisClient(const std::string &uri) {
+RedisClient::RedisClient(const std::string &uri)
+{
 #if HAVE_REDIS_PLUS_PLUS
-    try {
+    try
+    {
         redis_ = std::make_shared<sw::redis::Redis>(uri);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         LOG_ERROR << "Redis 连接失败: " << e.what();
     }
 #else
@@ -21,6 +25,7 @@ RedisClient::RedisClient(const std::string &uri) {
 #endif
 }
 
-std::shared_ptr<sw::redis::Redis> RedisClient::get() {
+std::shared_ptr<sw::redis::Redis> RedisClient::get()
+{
     return redis_;
 }
