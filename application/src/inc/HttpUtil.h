@@ -47,6 +47,11 @@ inline void sendError(HttpResponse* resp, const std::string &message, int code, 
     resp->SetBody(body);
     resp->SetBodyType(HTML_TYPE);
     resp->SetContentLength(static_cast<int>(body.size()));
+    // CORS & header exposure（便于前端读取 Authorization 等）
+    resp->AddHeader("Access-Control-Allow-Origin", "*");
+    resp->AddHeader("Access-Control-Expose-Headers", "Authorization, X-Session-ID, Content-Length, Content-Range");
+    resp->AddHeader("Access-Control-Allow-Headers", "Authorization, X-Session-ID, Content-Type, Range");
+    resp->AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     resp->SetCloseConnection(true); // 保守：错误后关闭
     if (conn) conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});
 }
@@ -59,6 +64,11 @@ inline void sendJson(HttpResponse* resp, json &body, const std::shared_ptr<Conne
     resp->SetBody(body.dump());
     resp->SetBodyType(HTML_TYPE);
     resp->SetContentLength(static_cast<int>(body.dump().size()));
+    // CORS & header exposure（便于前端读取 Authorization 等）
+    resp->AddHeader("Access-Control-Allow-Origin", "*");
+    resp->AddHeader("Access-Control-Expose-Headers", "Authorization, X-Session-ID, Content-Length, Content-Range");
+    resp->AddHeader("Access-Control-Allow-Headers", "Authorization, X-Session-ID, Content-Type, Range");
+    resp->AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     // 是否关闭连接由上层根据请求头决定；为兼容前端 fetch，这里也可选择保持连接
     // 不强制添加 Connection: close 头，交由 HttpServer 根据 close_flag 决定
     if (conn) conn->setWriteCompleteCallback([](const std::shared_ptr<Connection>& c){ c->HandleClose(); return true;});

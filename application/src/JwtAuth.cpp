@@ -1,12 +1,6 @@
 #include "inc/JwtAuth.h"
 #include <chrono>
-
-#if __has_include(<jwt-cpp/jwt.h>)
 #include <jwt-cpp/jwt.h>
-#define HAVE_JWT_CPP 1
-#else
-#define HAVE_JWT_CPP 0
-#endif
 
 using namespace std::chrono;
 
@@ -15,7 +9,6 @@ JwtAuth::JwtAuth(std::string secret, int expireSeconds)
 
 std::string JwtAuth::issueToken(const JwtUser &u) const
 {
-#if HAVE_JWT_CPP
     auto now = system_clock::now();
     auto exp = now + seconds(exp_);
     auto token = jwt::create()
@@ -27,16 +20,10 @@ std::string JwtAuth::issueToken(const JwtUser &u) const
                      .set_payload_claim("jti", jwt::claim(u.jti))
                      .sign(jwt::algorithm::hs256{secret_});
     return token;
-#else
-    (void)u;
-    return std::string();
-#endif
 }
 
 std::optional<JwtUser> JwtAuth::verifyToken(const std::string &token) const
 {
-    (void)token;
-#if HAVE_JWT_CPP
     try
     {
         auto decoded = jwt::decode(token);
@@ -57,7 +44,4 @@ std::optional<JwtUser> JwtAuth::verifyToken(const std::string &token) const
     {
         return std::nullopt;
     }
-#else
-    return std::nullopt;
-#endif
 }

@@ -75,14 +75,17 @@ bool AuthHandler::handleLogin(const std::shared_ptr<Connection> &conn, HttpReque
         saveSession(sessionId, userId, name);
         json out = {{"code", 0}, {"message", "登录成功"}, {"sessionId", sessionId}, {"userId", userId}, {"username", name}};
         // 如果启用了 JWT，则签发一个 Bearer token 供前端使用
-        if (jwt_) {
+        if (jwt_)
+        {
             JwtUser ju{userId, name, generateSessionId()};
             std::string token = jwt_->issueToken(ju);
-            if (!token.empty()) {
+            if (!token.empty())
+            {
                 out["token"] = token;
                 // 兼容性：也通过响应头暴露，便于前端存储
                 resp->AddHeader("Authorization", std::string("Bearer ") + token);
             }
+            LOG_INFO << "为用户 " << name << " 签发 JWT" << token;
         }
         sendJson(resp, out, conn);
         mysql_free_result(r);
@@ -154,22 +157,25 @@ void AuthHandler::saveSession(const std::string &sessionId, int userId, const st
 
 bool AuthHandler::ensureAuth(HttpRequest &req, int &userId, std::string &username)
 {
-    // 1) 优先解析 Authorization: Bearer <token>
+    // 优先解析 Authorization: Bearer <token>
     std::string authz = req.GetHeader("Authorization");
-    if (!authz.empty()) {
+    if (!authz.empty())
+    {
+        LOG_INFO << "解析 Authorization: " << authz;
         const std::string prefix = "Bearer ";
-        if (authz.rfind(prefix, 0) == 0 && jwt_) {
+        if (authz.rfind(prefix, 0) == 0 && jwt_)
+        {
             std::string token = authz.substr(prefix.size());
             auto userOpt = jwt_->verifyToken(token);
-            if (userOpt) {
+            if (userOpt)
+            {
                 userId = userOpt->userId;
                 username = userOpt->username;
                 return true;
             }
         }
     }
-    // 2) 回退到 X-Session-ID
+    // 回退到 X-Session-ID
     std::string sessionId = req.GetHeader("X-Session-ID");
     return validateSession(sessionId, userId, username);
 }
-

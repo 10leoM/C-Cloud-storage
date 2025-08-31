@@ -648,22 +648,30 @@
     // 添加 AbortController 用于控制视频连接
     let videoAbortController = null;
 
-    // 会话管理
+    // 会话管理（支持 JWT + 旧 Session 并存）
     let sessionId = localStorage.getItem('sessionId');
+    let token = localStorage.getItem('token');
     let currentUser = localStorage.getItem('username');
+
+    // 统一构建鉴权请求头
+    function buildAuthHeaders(init = {}) {
+        const h = new Headers(init);
+        if (token) h.set('Authorization', `Bearer ${token}`);
+        if (sessionId) h.set('X-Session-ID', sessionId);
+        return h;
+    }
+    function hasAuth() { return !!(token || sessionId); }
 
     // 下载文件函数
     async function downloadFile(filename, originalName) {
-        if (!sessionId) {
+        if (!hasAuth()) {
             alert('请先登录');
             return;
         }
 
         try {
             const response = await fetch(`/download/${filename}`, {
-                headers: {
-                    'X-Session-ID': sessionId
-                }
+                headers: buildAuthHeaders()
             });
 
             if (!response.ok) {
@@ -688,7 +696,7 @@
 
     // 检查登录状态
     function checkLoginStatus() {
-        if (sessionId && currentUser) {
+        if (hasAuth() && currentUser) {
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('main-content').classList.remove('hidden');
             document.getElementById('user-info').classList.remove('hidden');
@@ -729,32 +737,40 @@
 
         fetch('/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 username: username,
                 password: password
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.code === 0) {
-                sessionId = data.sessionId;
+        .then(async response => {
+            const authz = response.headers.get('Authorization');
+            let tokenFromHeader = '';
+            if (authz && /^Bearer\s+/i.test(authz)) tokenFromHeader = authz.replace(/^Bearer\s+/i, '');
+            const data = await response.json().catch(() => ({}));
+            return { ok: response.ok, data, tokenFromHeader };
+        })
+        .then(({ ok, data, tokenFromHeader }) => {
+            if (ok && (data.code === 0 || data.success)) {
+                if (data.sessionId) {
+                    sessionId = data.sessionId;
+                    localStorage.setItem('sessionId', sessionId);
+                }
+                const t = data.token || data.jwt || data.access_token || tokenFromHeader || '';
+                if (t) { token = t; localStorage.setItem('token', token); }
                 currentUser = username;
-                localStorage.setItem('sessionId', sessionId);
                 localStorage.setItem('username', username);
                 checkLoginStatus();
             } else {
                 // 显示具体的错误信息
-                if (data.message.includes('用户名')) {
+                if (data.message && data.message.includes('用户名')) {
                     document.getElementById('username-error').textContent = data.message;
                     document.getElementById('username-error').style.display = 'block';
-                } else if (data.message.includes('密码')) {
+                } else if (data.message && data.message.includes('密码')) {
                     document.getElementById('password-error').textContent = data.message;
                     document.getElementById('password-error').style.display = 'block';
                 } else {
-                    alert(data.message);
+                    alert((data && data.message) ? data.message : '登录失败');
                 }
             }
         })
@@ -767,15 +783,15 @@
     function logout() {
         fetch('/logout', {
             method: 'POST',
-            headers: {
-                'X-Session-ID': sessionId
-            }
+            headers: buildAuthHeaders()
         })
         .then(response => response.json())
         .then(data => {
             localStorage.removeItem('sessionId');
+            localStorage.removeItem('token');
             localStorage.removeItem('username');
             sessionId = null;
+            token = null;
             currentUser = null;
             checkLoginStatus();
         })
@@ -786,7 +802,7 @@
 
     // 修改现有函数以添加会话ID
     function uploadFile() {
-        if (!sessionId) {
+        if (!hasAuth()) {
             alert('请先登录');
             return;
         }
@@ -802,9 +818,10 @@
         const progressBar = document.querySelector('.progress-bar');
         progress.style.display = 'block';
 
-        const xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
         xhr.open('POST', '/upload', true);
-        xhr.setRequestHeader('X-Session-ID', sessionId);
+    if (sessionId) xhr.setRequestHeader('X-Session-ID', sessionId);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
         xhr.upload.onprogress = function(e) {
             if (e.lengthComputable) {
@@ -833,20 +850,18 @@
     }
 
     function loadFileList() {
-        if (!sessionId) {
+        if (!hasAuth()) {
             return;
         }
 
-        fetch('/files', {
-            headers: {
-                'X-Session-ID': sessionId
-            }
-        })
+    fetch('/files', { headers: buildAuthHeaders() })
         .then(response => {
             if (response.status === 401) {
                 localStorage.removeItem('sessionId');
+        localStorage.removeItem('token');
                 localStorage.removeItem('username');
                 sessionId = null;
+        token = null;
                 currentUser = null;
                 checkLoginStatus();
                 throw new Error('会话已过期，请重新登录');
@@ -1169,16 +1184,14 @@
     }
 
     function deleteFile(filename) {
-        if (!sessionId) {
+        if (!hasAuth()) {
             alert('请先登录');
             return;
         }
 
         fetch(`/delete/${filename}`, {
             method: 'DELETE',
-            headers: {
-                'X-Session-ID': sessionId
-            }
+            headers: buildAuthHeaders()
         })
         .then(response => response.json())
         .then(data => {
@@ -1195,7 +1208,7 @@
     }
 
     function previewImage(filename, originalName) {
-        if (!sessionId) {
+        if (!hasAuth()) {
             alert('请先登录');
             return;
         }
@@ -1205,9 +1218,10 @@
         const overlay = document.getElementById('overlay');
         
         // 添加会话ID到图片源URL
-        const xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
         xhr.open('GET', `/download/${filename}`, true);
-        xhr.setRequestHeader('X-Session-ID', sessionId);
+    if (sessionId) xhr.setRequestHeader('X-Session-ID', sessionId);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         xhr.responseType = 'blob';
         
         xhr.onload = function() {
@@ -1357,9 +1371,7 @@
     async function searchUsers(keyword) {   // 搜索用户，是否存在sessionId，有则跳转
         try {
             const response = await fetch(`/users/search?keyword=${encodeURIComponent(keyword)}`, {
-                headers: {
-                    'X-Session-ID': localStorage.getItem('sessionId')
-                }
+                headers: buildAuthHeaders()
             });
             
             const data = await response.json();
@@ -1414,10 +1426,7 @@
         try {
             const response = await fetch('/share', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': localStorage.getItem('sessionId')
-                },
+                headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(shareData)
             });
             
@@ -1533,10 +1542,7 @@
         try {
             const response = await fetch('/share', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': localStorage.getItem('sessionId')
-                },
+                headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     fileId: fileId,
                     shareType: 'private'

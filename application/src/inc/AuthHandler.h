@@ -40,8 +40,8 @@ public:
 
 private:
     Db &db_;
-    JwtAuth* jwt_ {nullptr};
-    std::shared_ptr<sw::redis::Redis> redis_{}; // 可选 Redis：用于会话缓存
+    JwtAuth* jwt_ {nullptr};                    // JWT：用于用户身份验证
+    std::shared_ptr<sw::redis::Redis> redis_{}; // Redis：用于会话缓存
 
     std::string generateSessionId();                                                         // 生成会话 ID
     void saveSession(const std::string &sessionId, int userId, const std::string &username); // 保存会话
