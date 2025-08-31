@@ -6,20 +6,21 @@
 #include "Logger.h"
 #include "FileUploadContext.h"
 #include "FileDownContext.h"
-#include "src/inc/Db.h"
-#include "src/inc/Util.h"
-#include "src/inc/FilenameMap.h"
-#include "src/inc/AuthHandler.h"
-#include "src/inc/StaticHandler.h"
-#include "src/inc/FileHandler.h"
-#include "src/inc/ShareHandler.h"
-#include "src/inc/UserHandler.h"
-#include "src/inc/Router.h"
-#include "src/inc/Db.h"
-#include "src/inc/HttpUtil.h"
+#include "Db.h"
+#include "Util.h"
+#include "FilenameMap.h"
+#include "AuthHandler.h"
+#include "StaticHandler.h"
+#include "FileHandler.h"
+#include "ShareHandler.h"
+#include "UserHandler.h"
+#include "Router.h"
+#include "Db.h"
+#include "HttpUtil.h"
 #include "Connection.h"
 #include "HttpRequest.h"
 #include "HttpResponse.h"
+#include "AsyncLogging.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <map>
@@ -195,9 +196,25 @@ private:
     // 简单转发包装已移除，直接在 Routes 中绑定到各 Handler
 };
 
+std::unique_ptr<AsyncLogging> asynclog;
+void AsyncOutputFunc(const char *data, int len)
+{
+    asynclog->Append(data, len);
+}
+
+void AsyncFlushFunc()
+{
+    asynclog->Flush();
+}
+
 int main()
 {
     Logger::SetLogLevel(Logger::INFO);
+    // asynclog = std::make_unique<AsyncLogging>();
+    // Logger::SetOutput(AsyncOutputFunc);
+    // Logger::SetFlush(AsyncFlushFunc);
+
+    // asynclog->Start();
     EventLoop loop;
     // 监听 0.0.0.0 以便通过 localhost(127.0.0.1) 或本机 IP 访问
     HttpServer server(&loop, "0.0.0.0", 8080, false);

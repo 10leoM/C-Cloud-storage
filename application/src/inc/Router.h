@@ -44,7 +44,7 @@ public:
                 std::map<std::string, std::string> params;
                 for (size_t i = 0; i < route.params.size() && i + 1 < matches.size(); ++i)
                 {
-                    params[route.params[i]] = matches[i + 1];
+                    params[route.params[i]] = matches[i + 1];       // 路由参数值
                 }
                 req.SetPathParam(params);
                 return route.handler(conn, req, resp);
@@ -56,10 +56,10 @@ public:
 private:
     struct Route
     {
-        std::regex pattern;
-        std::vector<std::string> params;
-        Handler handler;
-        HttpMethod method;
+        std::regex pattern;                     // 路由正则表达式
+        std::vector<std::string> params;        // 路由参数名称
+        Handler handler;                        // 路由处理函数
+        HttpMethod method;                      // 请求方法
     };
 
     static std::string escapeRegex(const std::string &str)

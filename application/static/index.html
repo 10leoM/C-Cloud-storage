@@ -1354,7 +1354,7 @@
         }, 300);
     });
 
-    async function searchUsers(keyword) {
+    async function searchUsers(keyword) {   // 搜索用户，是否存在sessionId，有则跳转
         try {
             const response = await fetch(`/users/search?keyword=${encodeURIComponent(keyword)}`, {
                 headers: {

@@ -43,4 +43,36 @@ target_link_libraries(http_upload pine_shared mysqlclient stdc++fs)
 target_include_directories(http_upload PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径
 set_target_properties(http_upload PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/application/bin)
 
+# ---- Optional deps: jwt-cpp & redis-plus-plus ----
+include(CheckIncludeFileCXX)
+check_include_file_cxx("jwt-cpp/jwt.h" HAVE_JWT_CPP)
+check_include_file_cxx("sw/redis++/redis++.h" HAVE_REDIS_PLUS_PLUS)
+
+if(HAVE_JWT_CPP)
+    target_compile_definitions(http_upload PRIVATE HAVE_JWT_CPP=1)
+endif()
+
+if(HAVE_REDIS_PLUS_PLUS)
+    # 尝试通过 pkg-config 找 hiredis/redis++
+    find_package(PkgConfig QUIET)
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(REDIS_PLUS_PLUS QUIET redis++ libredis++)
+        if(REDIS_PLUS_PLUS_FOUND)
+            target_include_directories(http_upload PRIVATE ${REDIS_PLUS_PLUS_INCLUDE_DIRS})
+            target_link_libraries(http_upload ${REDIS_PLUS_PLUS_LIBRARIES})
+        endif()
+        pkg_check_modules(HIREDIS QUIET hiredis)
+        if(HIREDIS_FOUND)
+            target_include_directories(http_upload PRIVATE ${HIREDIS_INCLUDE_DIRS})
+            target_link_libraries(http_upload ${HIREDIS_LIBRARIES})
+        else()
+            # 常见库名的兜底
+            find_library(HIREDIS_LIB hiredis)
+            if(HIREDIS_LIB)
+                target_link_libraries(http_upload ${HIREDIS_LIB})
+            endif()
+        endif()
+    endif()
+endif()
+
 # 设置安装路径
