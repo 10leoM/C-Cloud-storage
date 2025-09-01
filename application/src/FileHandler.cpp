@@ -20,6 +20,24 @@ namespace fs = std::experimental::filesystem;
 FileHandler::FileHandler(Db &db, AuthHandler &auth, FilenameMap &fmap, const std::string &uploadDir)
     : db_(db), auth_(auth), fmap_(fmap), uploadDir_(uploadDir), filesRepo_(db), sharesRepo_(db) {}
 
+std::string FileHandler::getUserFileListCacheKey(int userId, const std::string& listType) {
+    return "user:" + std::to_string(userId) + ":files:" + listType;
+}
+
+std::string FileHandler::getFileMetaCacheKey(int fileId) {
+    return "file:meta:" + std::to_string(fileId);
+}
+
+void FileHandler::invalidateUserCache(int userId) {
+    if (!cache_) return;
+    
+    // 删除用户相关的所有文件列表缓存
+    cache_->invalidatePattern("user:" + std::to_string(userId) + ":files:*");
+    
+    // 更新热点文件排行榜
+    cache_->addToRank("hot:users", std::to_string(userId), 1.0);
+}
+
 bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
 {
     int userId;
@@ -32,11 +50,50 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
 
     std::string listType = req.GetQueryValue("type");
     listType = listType == "" ? "my" : listType;
-    json out;
-    out["code"] = 0;
-    out["message"] = "Success";
-    json files = json::array();     // json数组，存储文件信息
+    
+    // 尝试从缓存获取文件列表
+    if (cache_) {
+        std::string cacheKey = getUserFileListCacheKey(userId, listType);
+        auto cached = cache_->getOrLoad(cacheKey, 300, [&]() -> std::optional<json> { // 5分钟缓存
+            return loadUserFileList(userId, listType);
+        });
+        
+        if (cached) {
+            json out = {
+                {"code", 0},
+                {"message", "Success"},
+                {"files", *cached},
+                {"cached", true}
+            };
+            sendJson(resp, out, conn, HttpStatusCode::OK);
+            
+            // 记录访问热度
+            cache_->incrCount("user:" + std::to_string(userId) + ":access_count", 24 * 3600);
+            return true;
+        }
+    }
+    
+    // 缓存未命中或无缓存，直接查询数据库
+    auto files = loadUserFileList(userId, listType);
+    if (files) {
+        json out = {
+            {"code", 0},
+            {"message", "Success"},
+            {"files", *files},
+            {"cached", false}
+        };
+        sendJson(resp, out, conn, HttpStatusCode::OK);
+    } else {
+        sendError(resp, "查询文件列表失败", HttpStatusCode::InternalServerError, conn);
+    }
+    
+    return true;
+}
+
+std::optional<json> FileHandler::loadUserFileList(int userId, const std::string& listType) {
+    json files = json::array();
     std::vector<FileRow> rows;
+    
     if (listType == "my")
         rows = filesRepo_.listMyFiles(userId);
     else if (listType == "shared")
@@ -72,9 +129,8 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
             fileInfo["shareInfo"] = shareInfo;
         files.push_back(fileInfo);
     }
-    out["files"] = files;
-    sendJson(resp, out, conn, HttpStatusCode::OK);
-    return true;
+    
+    return files;
 }
 
 bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
@@ -119,6 +175,19 @@ bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequ
         }
     }
     fmap_.erase(filename);
+    
+    // 缓存失效
+    if (cache_) {
+        // 删除文件元数据缓存
+        cache_->invalidate(getFileMetaCacheKey(fileId));
+        
+        // 删除用户文件列表缓存
+        invalidateUserCache(userId);
+        
+        // 更新删除统计
+        cache_->incrCount("stats:files_deleted", 24 * 3600);
+    }
+    
     json out = {{"code", 0}, {"message", "success"}};
     sendJson(resp, out, conn, HttpStatusCode::OK);
     return true;
@@ -207,6 +276,23 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
         return true;
     }
     uintmax_t fileSize = fs::file_size(filepath);
+    
+    // 记录下载统计到缓存
+    if (cache_) {
+        // 增加文件下载次数
+        cache_->incrCount("file:" + serverFilename + ":downloads", 30 * 24 * 3600); // 30天
+        
+        // 更新热门文件排行榜
+        cache_->addToRank("hot:files", serverFilename, 1.0);
+        
+        // 记录用户下载活动
+        if (isAuthenticated) {
+            cache_->incrCount("user:" + std::to_string(userId) + ":downloads", 24 * 3600);
+        }
+        
+        // 全局下载统计
+        cache_->incrCount("stats:total_downloads", 24 * 3600);
+    }
 
     // 处理 HEAD 请求
     if (req.GetMethod() == HttpMethod::kHead)

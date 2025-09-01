@@ -38,6 +38,7 @@ file(GLOB_RECURSE http_upload_sources
 set(http_upload_include ${PROJECT_SOURCE_DIR}/application/inc ${PROJECT_SOURCE_DIR}/application/src/inc)
 include_directories(${http_upload_include})
 add_executable(http_upload ${http_upload_sources})
+
 # 需要 MySQL C API 和 experimental::filesystem
 target_link_libraries(http_upload pine_shared mysqlclient stdc++fs)
 target_include_directories(http_upload PRIVATE ${PROJECT_SOURCE_DIR}/mymuduo/tcp/inc ${PROJECT_SOURCE_DIR}/http/inc ${PROJECT_SOURCE_DIR}/mymuduo/timer/inc ${PROJECT_SOURCE_DIR}/mymuduo/base/inc ${PROJECT_SOURCE_DIR}/mymuduo/log/inc ${PROJECT_SOURCE_DIR}/mymuduo/router/inc) # 添加头文件路径

@@ -3,6 +3,20 @@
 #include <string>
 #include <algorithm>
 
+// 添加工具函数
+static std::string toLower(std::string s) {     // 转换为小写
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return s;
+}
+
+static std::string trim(const std::string& s) { // 去除首尾空白
+    size_t start = 0, end = s.size();
+    while (start < end && std::isspace(static_cast<unsigned char>(s[start]))) ++start;
+    while (end > start && std::isspace(static_cast<unsigned char>(s[end-1]))) --end;
+    return s.substr(start, end - start);
+}
+
 HttpRequest::HttpRequest():method_(HttpMethod::kInvalid), version_(HttpVersion::kUnknown) {}
 
 HttpRequest::~HttpRequest() {}
@@ -10,15 +24,18 @@ HttpRequest::~HttpRequest() {}
 void HttpRequest::SetMethod(const std::string &method) 
 {
     method_ = HttpMethod::kInvalid; // 默认无效
-    if (method == "GET") 
+    std::string upperMethod = method;
+    std::transform(upperMethod.begin(), upperMethod.end(), upperMethod.begin(), ::toupper);
+    
+    if (upperMethod == "GET") 
         method_ = HttpMethod::kGet;
-    else if (method == "POST")
+    else if (upperMethod == "POST")
         method_ = HttpMethod::kPost;
-    else if (method == "HEAD")
+    else if (upperMethod == "HEAD")
         method_ = HttpMethod::kHead;
-    else if (method == "PUT")
+    else if (upperMethod == "PUT")
         method_ = HttpMethod::kPut;
-    else if (method == "DELETE")
+    else if (upperMethod == "DELETE")
         method_ = HttpMethod::kDelete;
 }
 
@@ -48,9 +65,10 @@ std::string HttpRequest::GetMethodString() const
 void HttpRequest::SetVersion(const std::string &ver)
 {
     version_ = HttpVersion::kUnknown; // 默认未知
-    if (ver == "1.0")
+    std::string lowerVer = toLower(ver);
+    if (lowerVer == "1.0" || lowerVer == "http/1.0")
         version_ = HttpVersion::kHttp10;
-    else if (ver == "1.1")
+    else if (lowerVer == "1.1" || lowerVer == "http/1.1")
         version_ = HttpVersion::kHttp11;
 }
 
@@ -151,12 +169,12 @@ const std::string &HttpRequest::GetProtocol() const
 
 void HttpRequest::AddHeader(const std::string &field, const std::string &value) 
 {
-    headers_[field] = value; // 添加请求头
+    headers_[toLower(field)] = trim(value); // 添加请求头
 }
 
 std::string HttpRequest::GetHeader(const std::string &field) const 
 {
-    auto it = headers_.find(field); 
+    auto it = headers_.find(toLower(field)); 
     if (it != headers_.end())
         return it->second;
     return {};
@@ -265,11 +283,14 @@ bool HttpRequest::ExtractPathParams(const std::string &pattern)
 bool HttpRequest::ParseRangeHeader()
 {
     has_range_ = false; range_start_ = 0; range_end_ = -1; range_suffix_ = false;
-    auto it = headers_.find("Range");
-    if (it == headers_.end()) return false;
-    const std::string& val = it->second;
-    if (val.size() < 6 || val.substr(0,6) != "bytes=") return false;
-    std::string spec = val.substr(6);
+    const std::string val = GetHeader("Range");
+    if (val.empty()) return false;
+    
+    // Range 头值大小写不敏感: "bytes=" 或 "BYTES="
+    std::string lowerVal = toLower(val);
+    if (lowerVal.size() < 6 || lowerVal.substr(0,6) != "bytes=") return false;
+    
+    std::string spec = val.substr(6);  // 使用原值，只有前缀需要检查大小写
     auto dash = spec.find('-');
     if (dash == std::string::npos) return false;
     std::string start = spec.substr(0, dash);

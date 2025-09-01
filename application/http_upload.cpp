@@ -22,6 +22,7 @@
 #include "HttpResponse.h"
 #include "JwtAuth.h"
 #include "RedisClient.h"
+#include "HotCache.h"
 #include "AsyncLogging.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -53,6 +54,7 @@ private:
     FileHandler file_;     // 文件相关处理（list/delete/...）
     ShareHandler share_;   // 分享相关处理
     UserHandler user_;     // 用户相关处理（搜索等）
+    std::shared_ptr<HotCache> cache_; // Redis 缓存
 
     Router router_;
 
@@ -107,19 +109,30 @@ public:
         }
 
         // 注入 Redis（若提供了 REDIS_URL，例如：tcp://127.0.0.1:6379?db=0）
-        const char* redisUrl = ::getenv("REDIS_URL");
-        static std::unique_ptr<RedisClient> s_redis;
-        if (redisUrl && *redisUrl) {
-            s_redis = std::make_unique<RedisClient>(redisUrl);
-            if (s_redis->get()) {
-                auth_.setRedis(s_redis->get());
-                LOG_INFO << "Redis enabled: " << redisUrl;
-            } else {
-                LOG_WARN << "Redis URL provided but client not available (headers or libs missing)";
-            }
-        } else {
-            LOG_WARN << "Redis not enabled. Set REDIS_URL to enable Redis cache";
-        }
+        // const char* redisUrl = ::getenv("REDIS_URL");
+        // static std::unique_ptr<RedisClient> s_redis;
+        // if (redisUrl && *redisUrl) {
+        //     s_redis = std::make_unique<RedisClient>(redisUrl);
+        //     if (s_redis->get()) {
+        //         auth_.setRedis(s_redis->get());
+                
+        //         // 初始化热点缓存
+        //         try {
+        //             cache_ = std::make_shared<HotCache>(redisUrl);
+        //             file_.setCache(cache_);
+        //             LOG_INFO << "HotCache initialized successfully";
+        //         } catch (const std::exception& e) {
+        //             LOG_WARN << "Failed to initialize HotCache: " << e.what();
+        //             cache_.reset();
+        //         }
+                
+        //         LOG_INFO << "Redis enabled: " << redisUrl;
+        //     } else {
+        //         LOG_WARN << "Redis URL provided but client not available (headers or libs missing)";
+        //     }
+        // } else {
+        //     LOG_WARN << "Redis not enabled. Set REDIS_URL to enable Redis cache";
+        // }
 
         // 初始化路由表
         initRoutes();

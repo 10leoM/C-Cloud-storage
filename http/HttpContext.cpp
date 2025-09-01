@@ -95,10 +95,19 @@ bool HttpContext::ParseRequest(const char *begin, int size)
         case HttpRequestParseState::CR_LF_CR:
             if (ch == LF) {
                 headers_complete_ = true;
-                // 判断 body 模式
-                auto &hs = request_->GetHeaders();
-                if (hs.count("Transfer-Encoding") && hs.at("Transfer-Encoding") == "chunked") { chunked_ = true; state_ = HttpRequestParseState::BODY; }
-                else if (hs.count("Content-Length")) { content_length_ = static_cast<size_t>(::atoll(request_->GetHeader("Content-Length").c_str())); if (content_length_ > 0) state_ = HttpRequestParseState::BODY; else { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; } }
+                // 判断 body 模式 - 使用 GetHeader 而不是直接访问 map
+                std::string transferEncoding = request_->GetHeader("Transfer-Encoding");
+                std::string contentLength = request_->GetHeader("Content-Length");
+                
+                if (!transferEncoding.empty() && transferEncoding == "chunked") { 
+                    chunked_ = true; 
+                    state_ = HttpRequestParseState::BODY; 
+                }
+                else if (!contentLength.empty()) { 
+                    content_length_ = static_cast<size_t>(::atoll(contentLength.c_str())); 
+                    if (content_length_ > 0) state_ = HttpRequestParseState::BODY; 
+                    else { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; } 
+                }
                 else { // 无长度：假定无 body
                     body_complete_ = true; state_ = HttpRequestParseState::COMPLETE;
                 }
@@ -179,9 +188,16 @@ bool HttpContext::ParseIncremental(const char* data, size_t len, size_t &consume
             if (state_ == HttpRequestParseState::START) state_ = HttpRequestParseState::METHOD;
             if (line.empty()) {
                 headers_complete_ = true;
-                auto &hs = request_->GetHeaders();
-                if (hs.count("Transfer-Encoding") && hs.at("Transfer-Encoding") == "chunked") { chunked_ = true; }
-                else if (hs.count("Content-Length")) { content_length_ = static_cast<size_t>(::atoll(request_->GetHeader("Content-Length").c_str())); }
+                // 使用 GetHeader 而不是直接访问 map
+                std::string transferEncoding = request_->GetHeader("Transfer-Encoding");
+                std::string contentLength = request_->GetHeader("Content-Length");
+                
+                if (!transferEncoding.empty() && transferEncoding == "chunked") { 
+                    chunked_ = true; 
+                }
+                else if (!contentLength.empty()) { 
+                    content_length_ = static_cast<size_t>(::atoll(contentLength.c_str())); 
+                }
                 if ((!chunked_ && content_length_ == 0)) { body_complete_ = true; state_ = HttpRequestParseState::COMPLETE; }
                 break;
             }
