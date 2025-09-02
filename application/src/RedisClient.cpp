@@ -18,3 +18,7 @@ std::shared_ptr<sw::redis::Redis> RedisClient::get()
 {
     return redis_;
 }
+sw::redis::Redis* RedisClient::operator->() 
+{
+    return redis_.get();
+}

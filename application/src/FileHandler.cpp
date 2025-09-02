@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iomanip>
 #include <memory>
+#include <chrono>
 
 using json = nlohmann::json;
 namespace fs = std::experimental::filesystem;
@@ -20,22 +21,63 @@ namespace fs = std::experimental::filesystem;
 FileHandler::FileHandler(Db &db, AuthHandler &auth, FilenameMap &fmap, const std::string &uploadDir)
     : db_(db), auth_(auth), fmap_(fmap), uploadDir_(uploadDir), filesRepo_(db), sharesRepo_(db) {}
 
-std::string FileHandler::getUserFileListCacheKey(int userId, const std::string& listType) {
-    return "user:" + std::to_string(userId) + ":files:" + listType;
-}
-
-std::string FileHandler::getFileMetaCacheKey(int fileId) {
-    return "file:meta:" + std::to_string(fileId);
-}
-
 void FileHandler::invalidateUserCache(int userId) {
     if (!cache_) return;
     
     // 删除用户相关的所有文件列表缓存
-    cache_->invalidatePattern("user:" + std::to_string(userId) + ":files:*");
-    
+    cache_->invalidatePattern("user:" + std::to_string(userId) + ":files:*");    
     // 更新热点文件排行榜
     cache_->addToRank("hot:users", std::to_string(userId), 1.0);
+}
+
+std::string FileHandler::getFileMetaCacheKey(const std::string& serverFilename) {
+    return "file:meta:" + serverFilename;
+}
+
+std::optional<json> FileHandler::getCachedFileMeta(const std::string& serverFilename) {
+    if (!cache_) {
+        // 无缓存，直接查询数据库
+        auto fileOpt = filesRepo_.getByServerFilename(serverFilename);
+        if (!fileOpt) return std::nullopt;
+        
+        return json{
+            {"id", fileOpt->id},
+            {"serverFilename", fileOpt->serverFilename.empty() ? serverFilename : fileOpt->serverFilename},
+            {"originalFilename", fileOpt->originalFilename.empty() ? serverFilename : fileOpt->originalFilename},
+            {"ownerId", fileOpt->ownerId}
+        };
+    }
+    
+    // 使用缓存 - 先尝试从缓存获取
+    const std::string cacheKey = getFileMetaCacheKey(serverFilename);
+    auto cached = cache_->get(cacheKey);
+    if (cached) {
+        return *cached; // 缓存命中，直接返回，无需查询数据库
+    }
+    
+    // 缓存未命中，查询数据库并缓存结果
+    auto fileOpt = filesRepo_.getByServerFilename(serverFilename);
+    if (!fileOpt) {
+        return std::nullopt;
+    }
+    
+    json fileMeta = {
+        {"id", fileOpt->id},
+        {"serverFilename", fileOpt->serverFilename.empty() ? serverFilename : fileOpt->serverFilename},
+        {"originalFilename", fileOpt->originalFilename.empty() ? serverFilename : fileOpt->originalFilename},
+        {"ownerId", fileOpt->ownerId}
+    };
+    
+    // 缓存结果
+    cache_->set(cacheKey, fileMeta, 300); // 5分钟TTL
+    return fileMeta;
+}
+
+void FileHandler::cacheFileMeta(const std::string& serverFilename, const json& meta) {
+    if (cache_) {
+        const std::string cacheKey = getFileMetaCacheKey(serverFilename);
+        cache_->set(cacheKey, meta, 300); // 5分钟TTL
+    }
 }
 
 bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)
@@ -54,7 +96,7 @@ bool FileHandler::handleListFiles(const std::shared_ptr<Connection> &conn, HttpR
     // 尝试从缓存获取文件列表
     if (cache_) {
         std::string cacheKey = getUserFileListCacheKey(userId, listType);
-        auto cached = cache_->getOrLoad(cacheKey, 300, [&]() -> std::optional<json> { // 5分钟缓存
+        auto cached = cache_->getOrLoad(cacheKey, 10, [&]() -> std::optional<json> { // 
             return loadUserFileList(userId, listType);
         });
         
@@ -178,8 +220,8 @@ bool FileHandler::handleDelete(const std::shared_ptr<Connection> &conn, HttpRequ
     
     // 缓存失效
     if (cache_) {
-        // 删除文件元数据缓存
-        cache_->invalidate(getFileMetaCacheKey(fileId));
+        // 删除文件元数据缓存 (使用filename而不是fileId)
+        cache_->invalidate(getFileMetaCacheKey(filename));
         
         // 删除用户文件列表缓存
         invalidateUserCache(userId);
@@ -242,22 +284,30 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
         else if (share.shareType == "user" && isAuthenticated && share.sharedWithId && userId == *share.sharedWithId) // 私有分享，需要分享给的用户是当前用户
             permitted = true;
     }
-    else // 无分享码，下载自己的文件
+    else // 无分享码，下载自己的文件 - 使用缓存优化
     {
         if (!isAuthenticated)
         {
             sendError(resp, "请先登录", HttpStatusCode::Unauthorized, conn);
             return true;
         }
-        auto fileOpt = filesRepo_.getByServerFilename(filename);
-        if (!fileOpt)
+        
+        // 🚀 使用缓存获取文件元数据，而不是直接查询数据库
+        auto fileMeta = getCachedFileMeta(filename);
+        if (!fileMeta)
         {
             sendError(resp, "文件不存在", HttpStatusCode::NotFound, conn);
             return true;
         }
-        serverFilename = fileOpt->serverFilename;
-        originalFilename = fileOpt->originalFilename;
-        ownerId = fileOpt->ownerId;
+        
+        // 安全地从JSON中提取字段，处理null值
+        const json& meta = *fileMeta;
+        serverFilename = meta.contains("serverFilename") && !meta["serverFilename"].is_null() 
+                        ? meta["serverFilename"].get<std::string>() : filename;
+        originalFilename = meta.contains("originalFilename") && !meta["originalFilename"].is_null() 
+                          ? meta["originalFilename"].get<std::string>() : filename;
+        ownerId = meta.contains("ownerId") && !meta["ownerId"].is_null() 
+                 ? meta["ownerId"].get<int>() : 0;
         permitted = (userId == ownerId);
     }
 
@@ -500,6 +550,21 @@ bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequ
         std::string fileType = FileTypeByExt(originalFilename);
         auto fileIdOpt = filesRepo_.createFile(serverFilename, originalFilename, fileSize, fileType, userId);
         int fileId = fileIdOpt.value_or(0);
+        
+        // 🚀 缓存新上传的文件元数据
+        if (cache_ && fileId > 0) {
+            json fileMeta = {
+                {"id", fileId},
+                {"serverFilename", serverFilename},
+                {"originalFilename", originalFilename.empty() ? serverFilename : originalFilename},
+                {"ownerId", userId}
+            };
+            cacheFileMeta(serverFilename, fileMeta);
+            
+            // 删除用户文件列表缓存
+            invalidateUserCache(userId);
+        }
+        
         json out = {{"code", 0}, {"message", "上传成功"}, {"fileId", fileId}, {"filename", serverFilename}, {"originalFilename", originalFilename}, {"size", fileSize}};
         sendJson(resp, out, conn);
         httpContext->SetContext(std::shared_ptr<void>());

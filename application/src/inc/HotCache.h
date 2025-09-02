@@ -8,6 +8,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include "RedisClient.h"
 
 using json = nlohmann::json;
 
@@ -52,8 +53,8 @@ public:
     bool isConnected();
 
 private:
-    sw::redis::Redis redis_;
-    
+    RedisClient redis_;
+
     // 互斥锁操作
     bool tryLock(const std::string& lockKey, int timeoutMs);
     void unlock(const std::string& lockKey);

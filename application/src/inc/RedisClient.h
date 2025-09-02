@@ -13,8 +13,10 @@ namespace sw{namespace redis{
 class RedisClient
 {
 public:
-    explicit RedisClient(const std::string &uri);
+    explicit RedisClient(const std::string &uri);   // uri实例：tcp://127.0.0.1:6379?db=0
     std::shared_ptr<sw::redis::Redis> get();
+
+    sw::redis::Redis* operator->();
 
 private:
     std::shared_ptr<sw::redis::Redis> redis_;   // Redis 连接实例

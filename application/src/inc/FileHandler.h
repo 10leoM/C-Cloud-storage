@@ -14,40 +14,44 @@
 #include "Connection.h"
 
 // 文件相关处理：先迁移 list/delete；后续再迁移 upload/download
-class FileHandler {
+class FileHandler
+{
 public:
-    FileHandler(Db& db, AuthHandler& auth, FilenameMap& fmap, const std::string& uploadDir);
-    
+    FileHandler(Db &db, AuthHandler &auth, FilenameMap &fmap, const std::string &uploadDir);
+
     // 设置缓存实例
     void setCache(std::shared_ptr<HotCache> cache) { cache_ = cache; }
 
     // 列出用户文件
-    bool handleListFiles(const std::shared_ptr<Connection>& conn, HttpRequest& req, HttpResponse* resp);
+    bool handleListFiles(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp);
 
     // 删除文件
-    bool handleDelete(const std::shared_ptr<Connection>& conn, HttpRequest& req, HttpResponse* resp);
+    bool handleDelete(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp);
 
     // 下载文件
-    bool handleDownload(const std::shared_ptr<Connection>& conn, HttpRequest& req, HttpResponse* resp);
+    bool handleDownload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp);
 
     // 上传文件
-    bool handleUpload(const std::shared_ptr<Connection>& conn, HttpRequest& req, HttpResponse* resp);
+    bool handleUpload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp);
 
 private:
-    Db& db_;
-    AuthHandler& auth_;
-    FilenameMap& fmap_;
+    Db &db_;
+    AuthHandler &auth_;
+    FilenameMap &fmap_;
     std::string uploadDir_;
     FilesRepository filesRepo_;
-    SharesRepository sharesRepo_; // 复用 Share 的判定逻辑与记录
+    SharesRepository sharesRepo_;     // 复用 Share 的判定逻辑与记录
     std::shared_ptr<HotCache> cache_; // Redis 缓存
-    
-    // 缓存相关的私有方法
-    std::string getUserFileListCacheKey(int userId, const std::string& listType);
-    std::string getFileMetaCacheKey(int fileId);
-    void invalidateUserCache(int userId);
-    
-    // 数据库查询方法
-    std::optional<nlohmann::json> loadUserFileList(int userId, const std::string& listType);
-};
 
+    // 缓存相关的私有方法
+    inline std::string getUserFileListCacheKey(int userId, const std::string &listType) // 用户文件列表缓存键
+    {
+        return "user:" + std::to_string(userId) + ":files:" + listType;
+    }
+    std::string getFileMetaCacheKey(const std::string& serverFilename); // 文件元数据缓存键
+    std::optional<nlohmann::json> getCachedFileMeta(const std::string& serverFilename); // 从缓存获取文件元数据
+    void cacheFileMeta(const std::string& serverFilename, const nlohmann::json& meta); // 缓存文件元数据
+    void invalidateUserCache(int userId); // 使用户缓存失效
+    // 数据库查询方法
+    std::optional<nlohmann::json> loadUserFileList(int userId, const std::string &listType);
+};
