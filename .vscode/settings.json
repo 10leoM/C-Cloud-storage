@@ -77,6 +77,7 @@
         "ciso646": "cpp",
         "queue": "cpp",
         "stack": "cpp",
-        "version": "cpp"
+        "version": "cpp",
+        "complex": "cpp"
     }
 }

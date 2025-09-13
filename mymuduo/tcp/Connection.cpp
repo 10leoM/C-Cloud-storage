@@ -117,7 +117,7 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
         }
         else
         {
-            LOG_ERROR << "Connection::Send - Connection Send ERROR";
+            LOG_ERROR << " Connection::Send - Connection fd: " << fd << " Send ERROR";
             return;
         }
     }
@@ -151,56 +151,73 @@ void Connection::Send(const char *msg, size_t len) // 发送数据
     }
 }
 
-void Connection::SendFile(int filefd, int size) // 发送文件
+void Connection::SendFile(int filefd, int64_t size) // 发送文件（支持大文件）
 {
-    size_t send_size = 0;
-    size_t data_size = static_cast<size_t>(size);
-    // std::cout<< "Connection::SendFile, filefd: " << filefd << ", size: " << data_size << std::endl;
-    // 一次性把文件写完，虽然肯定不行。
+    // 检查文件描述符有效性
+    if (filefd < 0) {
+        LOG_ERROR << "Connection::SendFile - Invalid file descriptor: " << filefd;
+        return;
+    }
+
+    uint64_t send_size = 0;
+    uint64_t data_size = static_cast<uint64_t>(size);
+    
     while (send_size < data_size)
     {
-        ssize_t bytes_write = sendfile(fd, filefd, (off_t *)&send_size, data_size - send_size);
-        if (bytes_write == -1 && errno == EINTR) // 程序正常中断、继续写入
-        {
-            printf("continue writing\n");
+        size_t toSend = data_size - send_size;
+        // sendfile 的第四个参数是 size_t，对于特别大的文件需要分块发送
+        if (toSend > SIZE_MAX) {
+            toSend = SIZE_MAX;
+        }
+        
+        ssize_t bytes_write = sendfile(fd, filefd, nullptr, toSend);
+        if (bytes_write > 0) {
+            send_size += static_cast<uint64_t>(bytes_write);
             continue;
         }
-        else if (bytes_write == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) // 非阻塞IO，这个条件表示数据全部写入完毕
+        if (bytes_write == -1 && errno == EINTR) // 程序正常中断、继续写入
+        {
+            continue;
+        }
+        else if (bytes_write == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) // 非阻塞IO，等待可写
         {
             continue;
         }
         else if (bytes_write == -1) // 其他错误
         {
-            printf("other error, size: %zu\n", data_size);
+            // 检查是否是客户端断开连接
+            if (errno == EPIPE || errno == ECONNRESET) {
+                LOG_INFO << "Connection::SendFile - Client disconnected during file transfer, fd: " << fd << ", filefd: " << filefd << ", errno: " << errno;
+                HandleClose();
+                return;
+            }
+            LOG_ERROR << "Connection::SendFile - sendfile error, fd: " << fd << ", filefd: " << filefd << ", errno: " << errno << ", sent: " << send_size << "/" << data_size;
             break;
         }
     }
+    
+    if (send_size < data_size) {
+        LOG_WARN << "Connection::SendFile - Incomplete transfer, sent: " << send_size << "/" << data_size;
+    }
 }
 
-void Connection::SendFileRange(int filefd, off_t start, size_t len)
+void Connection::SendFileRange(int filefd, off_t start, int64_t len)
 {
     // 使用 sendfile 支持 offset 的循环（Linux sendfile 第三个参数为 off_t* 会更新位置）
     off_t offset = start;
-    size_t sent = 0;
+    int64_t sent = 0;
     while (sent < len) {
-        size_t toSend = len - sent;
-        ssize_t n = ::sendfile(fd, filefd, &offset, toSend);
+        int64_t toSend = len - sent;
+        ssize_t n = sendfile(fd, filefd, &offset, toSend);
         if (n > 0) {
-            sent += static_cast<size_t>(n);
+            sent += static_cast<int64_t>(n);
             continue;
         }
         if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            // 将剩余部分记录到发送缓冲区（简化：读取拷贝方式）
-            size_t remain = len - sent;
-            std::string tmp;
-            tmp.resize(remain);
-            ssize_t rn = ::pread(filefd, (void *)tmp.data(), remain, offset);
-            if (rn > 0) {
-                Send(tmp.data(), static_cast<size_t>(rn));
-            }
-            break;
+            continue;
         }
         if (n == -1 && errno == EINTR) continue;
+        // LOG_WARN << "Connection::SendFileRange - sendfile error, fd: " << fd << ", filefd: " << filefd << ", errno: " << errno << ", sent: " << sent << "/" << len;
         break; // 其他错误终止
     }
 }
@@ -290,7 +307,7 @@ void Connection::HandleError()
     socklen_t len = sizeof(err);
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0)
         err = errno;
-    LOG_ERROR << "Connection error fd=" << fd << " err=" << strerror(err);
+    LOG_ERROR << " Connection error fd=" << fd << " err=" << strerror(err);
     if (errorCallback)
         errorCallback(shared_from_this());
 }

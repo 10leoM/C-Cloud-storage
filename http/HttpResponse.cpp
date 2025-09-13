@@ -30,9 +30,9 @@ void HttpResponse::SetContentType(const std::string &content_type)
     AddHeader("Content-Type", content_type);
 }
 
-void HttpResponse::SetContentLength(const int &len)
+void HttpResponse::SetContentLength(const int64_t &len)
 {
-    content_length_ = std::move(len);
+    content_length_ = len;
 }
 
 void HttpResponse::AddHeader(const std::string &key, const std::string &value)
@@ -45,7 +45,7 @@ bool HttpResponse::IsCloseConnection()
     return close_connection_;
 }   
 
-int HttpResponse::GetContentLength()
+int64_t HttpResponse::GetContentLength()
 {
     return content_length_;
 }

@@ -78,8 +78,8 @@ public:
     void Send(const std::string &msg);                       // 发送消息
     void Send(const char *msg, size_t len);                  // 发送C风格字符串
     void Send(const char *msg);                              // 发送C风格字符串
-    void SendFile(int filefd, int size);                     // 发送文件
-    void SendFileRange(int filefd, off_t start, size_t len); // 发送文件区间
+    void SendFile(int filefd, int64_t size);                 // 发送文件（支持大文件）
+    void SendFileRange(int filefd, off_t start, int64_t len); // 发送文件区间
     void shutdown();                                         // 半关闭(写端)
     void forceClose();                                       // 强制关闭
 

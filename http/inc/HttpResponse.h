@@ -36,7 +36,7 @@ private:
     bool close_connection_;      // 是否关闭连接
 
     std::map<std::string, std::string> headers_; // 响应头
-    int content_length_;                         // 内容长度
+    int64_t content_length_;                     // 内容长度（支持大文件）
     int filefd_;                                 // 文件描述符，用于文件传输
     HttpBodyType body_type_;                     // 响应体类型
     bool async_pending_ = false;                 // 是否处于异步延迟发送
@@ -57,11 +57,11 @@ public:
     void SetBody(const std::string &body);                            // 设置响应体内容
     void SetContentType(const std::string &content_type);             // 设置内容类型
     void AddHeader(const std::string &key, const std::string &value); // 添加响应头
-    void SetContentLength(const int &len);                        // 设置内容长度
+    void SetContentLength(const int64_t &len);                       // 设置内容长度（支持大文件）
     void SetFileFd(int file_fd);                                      // 设置文件描述符
     void SetBodyType(HttpBodyType body_type);                         // 设置响应体类型
     HttpBodyType GetBodyType();                                       // 获取响应体类型
-    int GetContentLength();                                           // 获取内容长度
+    int64_t GetContentLength();                                       // 获取内容长度（支持大文件）
     int GetFileFd();                                                  // 获取文件描述符
 
     bool IsCloseConnection(); // 检查是否关闭连接

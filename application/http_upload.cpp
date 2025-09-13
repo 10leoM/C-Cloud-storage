@@ -41,7 +41,7 @@
 using json = nlohmann::json;
 namespace fs = std::experimental::filesystem;
 
-class HttpUploadHandler
+class HttpUploadHandler // 外观模式Facade Pattren
 {
 private:
     std::string uploadDir_;   // 上传目录

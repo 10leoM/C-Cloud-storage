@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <memory>
 #include <chrono>
+#include <fcntl.h>
 
 using json = nlohmann::json;
 namespace fs = std::experimental::filesystem;
@@ -358,53 +359,49 @@ bool FileHandler::handleDownload(const std::shared_ptr<Connection> &conn, HttpRe
         return true;
     }
 
-    // 解析 Range 头
+    // 解析 Range 头，仅设置响应，委托给 HttpServer 统一发送
     std::string rangeHeader = req.GetHeader("Range");
     HttpRange::RangeSpec rs = HttpRange::parse(rangeHeader, fileSize);
-    if (rs.isRange && !rs.satisfiable) // 无法满足的 Range 请求
-    {
+    if (rs.isRange && !rs.satisfiable) {
         sendError(resp, "无法满足的 Range 请求", HttpStatusCode::RangeNotSatisfiable, conn);
         return true;
     }
 
-    std::shared_ptr<HttpContext> httpContext = conn->GetContext();
-    if (!httpContext)
-    {
-        sendError(resp, "Internal Server Error", HttpStatusCode::InternalServerError, conn);
+    int fd = ::open(filepath.c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        sendError(resp, "打开文件失败", HttpStatusCode::InternalServerError, conn);
         return true;
     }
-    std::shared_ptr<FileDownContext> downContext = httpContext->GetContext<FileDownContext>(); // 试图获取已有的下载上下文
-    if (!downContext)
+
+    if (rs.isRange)
     {
-        downContext = std::make_shared<FileDownContext>(filepath, originalFilename);
-        httpContext->SetContext(downContext);
-        if (rs.isRange)
-        {
-            resp->SetStatusCode(HttpStatusCode::PartialContent);
-            resp->SetStatusMessage("Partial Content");
-            resp->AddHeader("Content-Range", "bytes " + std::to_string(rs.start) + "-" + std::to_string(rs.end) + "/" + std::to_string(fileSize));
-        }
+        resp->SetStatusCode(HttpStatusCode::PartialContent);
+        resp->SetStatusMessage("Partial Content");
+        resp->AddHeader("Content-Range", "bytes " + std::to_string(rs.start) + "-" + std::to_string(rs.end) + "/" + std::to_string(fileSize));
+    }
         else
         {
             resp->SetStatusCode(HttpStatusCode::OK);
             resp->SetStatusMessage("OK");
         }
         resp->SetContentType("application/octet-stream");
-        resp->SetBodyType(HttpBodyType::HTML_TYPE);
+        resp->SetBodyType(HttpBodyType::FILE_TYPE);
         resp->SetContentLength(fileSize);
         resp->AddHeader("Content-Disposition", "attachment; filename=\"" + originalFilename + "\"");
         resp->AddHeader("Accept-Ranges", "bytes");
         resp->AddHeader("Connection", "keep-alive");
-        downContext->seekTo(rs.isRange ? rs.start : 0);
-    }
-    conn->setWriteCompleteCallback([downContext](const std::shared_ptr<Connection> &c)
-                                   {
-        std::string chunk; 
-        if (downContext->readNextChunk(chunk)) { c->Send(chunk); return true; }
-        c->HandleClose(); 
-        return true; });
+    
+    // 设置文件大小（支持大文件）
+    resp->SetFileFd(fd);
 
-    return true;
+    // 设置 Range 信息（如果有）
+    if (rs.isRange) {
+        long long start = static_cast<long long>(rs.start);
+        long long end = static_cast<long long>(rs.end);
+        resp->SetContentRange(start, end, static_cast<long long>(end - start + 1));
+    }
+    
+    return true; // 让 HttpServer::onRequest 负责真正发送与调用 Connection::SendFile / SendFileRange
 }
 
 bool FileHandler::handleUpload(const std::shared_ptr<Connection> &conn, HttpRequest &req, HttpResponse *resp)

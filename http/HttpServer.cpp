@@ -43,9 +43,10 @@ void HttpServer::start() { server_->start(); }
 
 void HttpServer::onConnection(const ConnectionPtr &conn)
 {
-    if (onConnectionCallback_) onConnectionCallback_(conn); // 用户自定义连接回调
+    if (onConnectionCallback_)
+        onConnectionCallback_(conn); // 用户自定义连接回调
     if (auto_close_conn_)
-        loop_->RunAfter(AUTOCLOSETIMEOUT,std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 使用弱引用避免循环引用
+        loop_->RunAfter(AUTOCLOSETIMEOUT, std::bind(&HttpServer::ActiveCloseConn, this, std::weak_ptr<Connection>(conn))); // 使用弱引用避免循环引用
 }
 
 void HttpServer::onMessage(const ConnectionPtr &conn)
@@ -59,27 +60,35 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
             conn->SetContext(context);
         }
         // 支持 HTTP pipelining: 循环解析缓冲中的多个请求
-        while (true) {
-            if (!context->HeadersComplete() || !context->BodyComplete()) {
+        while (true)
+        {
+            if (!context->HeadersComplete() || !context->BodyComplete())
+            {
                 size_t consumed = 0;
-                if (!context->ParseIncremental(conn->GetReadBuffer()->Peek(), conn->GetReadBuffer()->GetReadablebytes(), consumed)) {
+                if (!context->ParseIncremental(conn->GetReadBuffer()->Peek(), conn->GetReadBuffer()->GetReadablebytes(), consumed))
+                {
                     conn->Send("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
                     conn->HandleClose();
                     return;
                 }
-                if (consumed) conn->GetReadBuffer()->Retrieve(consumed);
+                if (consumed)
+                    conn->GetReadBuffer()->Retrieve(consumed);
 
                 // 头部完成但请求体未接收完，且达到阈值则先落盘（调用业务回调处理分片）
-                if (context->HeadersComplete() && !context->BodyComplete()) {
+                if (context->HeadersComplete() && !context->BodyComplete())
+                {
                     HttpRequest *req = context->GetRequest();
                     // 仅对上传接口执行分片回调，避免影响其他 POST
-                    if (req && req->GetMethod() == HttpMethod::kPost && req->GetUrl() == "/upload") {
+                    if (req && req->GetMethod() == HttpMethod::kPost && req->GetUrl() == "/upload")
+                    {
                         static const size_t kChunkThreshold = 1 * 1024 * 1024; // 1MB
                         size_t buffered = req->GetBody().size();
-                        if (buffered >= kChunkThreshold) {
+                        if (buffered >= kChunkThreshold)
+                        {
                             HttpResponse tmpResp(false); // 不关闭连接
                             bool syncProcessed = responseCallback_(conn, *req, &tmpResp);
-                            if (!syncProcessed) {
+                            if (!syncProcessed)
+                            {
                                 // 异步/增量处理：业务可能已清空 req->body() 并持久化，等待更多数据
                                 // 让出本次 onMessage，后续数据到来再继续
                                 return;
@@ -89,14 +98,16 @@ void HttpServer::onMessage(const ConnectionPtr &conn)
                     }
                 }
             }
-            if (context->GetCompleteRequest()) 
+            if (context->GetCompleteRequest())
             {
                 onRequest(conn, *context->GetRequest());
                 // 如果连接已被业务标记关闭则不再解析后续
-                if (conn->GetState() != connectionState::Connected) return;
+                if (conn->GetState() != connectionState::Connected)
+                    return;
                 context->ResetContextStatus();
                 // 若缓冲区尚有数据则继续下一轮；否则退出
-                if (conn->GetReadBuffer()->GetReadablebytes() == 0) break;
+                if (conn->GetReadBuffer()->GetReadablebytes() == 0)
+                    break;
                 continue; // 尝试解析下一条
             }
             // 未完成且没有更多数据可读，等待下一次 onMessage
@@ -113,7 +124,7 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
     HttpResponse response(Close);
     bool done = responseCallback_(conn, request, &response); // true 表示同步返回
     auto context = conn->GetContext();
-    if (!done) 
+    if (!done)
     {
         // 异步: 保存响应对象, 业务稍后填充后调用 SendDeferredResponse
         context->StoreDeferredResponse(response);
@@ -121,51 +132,60 @@ void HttpServer::onRequest(const ConnectionPtr &conn, HttpRequest &request)
     }
 
     // 同步回包
-    if(response.GetBodyType() == HttpBodyType::HTML_TYPE) {
+    if (response.GetBodyType() == HttpBodyType::HTML_TYPE)
+    {
         conn->Send(response.GetMessage());
-    } 
-    else if(response.GetBodyType() == HttpBodyType::FILE_TYPE) {
+    }
+    else if (response.GetBodyType() == HttpBodyType::FILE_TYPE)
+    {
         conn->Send(response.GetBeforeBody());
-        if (response.HasRange()) {
+        if (response.HasRange())
+        {
             off_t start = static_cast<off_t>(response.GetRangeStart());
             size_t len = static_cast<size_t>(response.GetRangeEnd() - response.GetRangeStart() + 1);
             conn->SendFileRange(response.GetFileFd(), start, len);
-        } 
-        else {
+        }
+        else
+        {
             conn->SendFile(response.GetFileFd(), response.GetContentLength());
         }
-        int ret = close(response.GetFileFd());
-        if (ret < 0) LOG_ERROR << "HttpServer::onRequest : close filefd failed, errno: " << errno;
+        close(response.GetFileFd()); // 关闭文件描述符
     }
-    if (response.IsCloseConnection()) conn->shutdown();
+    if (response.IsCloseConnection())
+        conn->HandleClose();
 }
 
 void HttpServer::SendDeferredResponse(const ConnectionPtr &conn)
 {
-    if (!conn || conn->GetState() != connectionState::Connected) return;
+    if (!conn || conn->GetState() != connectionState::Connected)
+        return;
     auto context = conn->GetContext();
-    if (!context || !context->HasDeferredResponse()) return;
+    if (!context || !context->HasDeferredResponse())
+        return;
 
     HttpResponse *resp = context->GetDeferredResponse();
-    if (resp->GetBodyType() == HttpBodyType::HTML_TYPE) {
+    if (resp->GetBodyType() == HttpBodyType::HTML_TYPE)
+    {
         conn->Send(resp->GetMessage());
-    } 
-    else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE) {
+    }
+    else if (resp->GetBodyType() == HttpBodyType::FILE_TYPE)
+    {
         conn->Send(resp->GetBeforeBody());
-        if (resp->HasRange()) {
+        if (resp->HasRange())
+        {
             off_t start = static_cast<off_t>(resp->GetRangeStart());
             size_t len = static_cast<size_t>(resp->GetRangeEnd() - resp->GetRangeStart() + 1);
             conn->SendFileRange(resp->GetFileFd(), start, len);
-        } 
-        else {
+        }
+        else
+        {
             conn->SendFile(resp->GetFileFd(), resp->GetContentLength());
         }
-        int ret = close(resp->GetFileFd());
-        if (ret < 0) LOG_ERROR << "HttpServer::SendDeferredResponse : close filefd failed errno=" << errno;
     }
     bool closeConn = resp->IsCloseConnection();
     context->ClearDeferredResponse();
-    if (closeConn) conn->HandleClose();
+    if (closeConn)
+        conn->HandleClose();
 }
 
 void HttpServer::SetThreadNums(int thread_nums) { server_->SetThreadPoolSize(thread_nums); }
@@ -191,7 +211,8 @@ void HttpServer::ActiveCloseConn(std::weak_ptr<Connection> &conn)
 
 void HttpServer::AddRoute(const std::string &path, const std::string &method, const std::string &handlerName)
 {
-    if (!router_) router_ = std::make_unique<RouteTrie>();
+    if (!router_)
+        router_ = std::make_unique<RouteTrie>();
     router_->addRoute(path, method, handlerName);
 }
 
